@@ -643,6 +643,31 @@ function fixup(d){
   d.students=d.students||[]; d.classes=d.classes||[]; d.attendance=d.attendance||[];
   d.classes.forEach(function(c){if(c.startDate===undefined)c.startDate='';if(c.endDate===undefined)c.endDate='';});
   d.payments=d.payments||[]; d.scores=d.scores||[]; d.lessons=d.lessons||[]; d.meta=d.meta||{}; d.slipNotes=d.slipNotes||{}; d.docs=d.docs||[];
+  d.payments.forEach(p=>{if(!Array.isArray(p.sessionKeys))p.sessionKeys=[];});
+  /* Chuyển dữ liệu cũ (thu theo tháng) sang mô hình theo buổi — chạy đúng một lần.
+     Mỗi lần thu cũ được gán các buổi billable trong tháng đó (đủ số buổi theo số tiền). */
+  if(!d.meta.payMigrated){
+    const chargeUX=!!(d.settings&&d.settings.chargeUnexcused);
+    const bs=['present','late'].concat(chargeUX?['absent']:[]);
+    const billOf={};
+    (d.attendance||[]).forEach(rec=>{(rec.records||[]).forEach(r=>{
+      if(!bs.includes(r.status))return;
+      (billOf[r.studentId]=billOf[r.studentId]||[]).push({key:rec.date+'|'+rec.classId,date:rec.date});
+    });});
+    Object.values(billOf).forEach(l=>l.sort((a,b)=>a.date.localeCompare(b.date)));
+    const claimed={};
+    d.payments.slice().sort((a,b)=>(a.paidAt||'').localeCompare(b.paidAt||'')).forEach(p=>{
+      if(p.sessionKeys.length||!p.month)return;
+      const stu=(d.students||[]).find(s=>s.id===p.studentId);
+      const rate=stu?(+stu.rate||0):0;
+      const cl=(claimed[p.studentId]=claimed[p.studentId]||new Set());
+      const pool=(billOf[p.studentId]||[]).filter(x=>x.date.slice(0,7)===p.month&&!cl.has(x.key));
+      let n=rate>0?Math.round((+p.amount||0)/rate):pool.length;
+      if(n<=0)n=pool.length;
+      p.sessionKeys=pool.slice(0,n).map(x=>{cl.add(x.key);return x.key;});
+    });
+    d.meta.payMigrated=true;
+  }
   d.lessons.forEach(function(l){if(!Array.isArray(l.docIds))l.docIds=[];});
   return d;
 }
@@ -732,6 +757,38 @@ function countBillable(sid,month){
 }
 function monthFee(sid,month){const s=studentById(sid);if(!s)return 0;return countBillable(sid,month)*(+s.rate||0);}
 function monthPaid(sid,month){return DB.payments.filter(p=>p.studentId===sid&&p.month===month).reduce((t,p)=>t+(+p.amount||0),0);}
+
+/* ===== MÔ HÌNH TÍNH TIỀN THEO BUỔI =====
+   Mỗi buổi billable (có mặt/muộn[/vắng KP nếu bật]) hoặc CHƯA THANH TOÁN,
+   hoặc thuộc về đúng một "lần chốt" (payment.sessionKeys). Không còn khái niệm tháng. */
+function sessKey(date,classId){return date+'|'+classId;}
+function billableSessionsOf(sid){
+  const bs=billableStatuses(); const out=[];
+  for(const rec of DB.attendance){
+    const r=(rec.records||[]).find(x=>x.studentId===sid);
+    if(r&&bs.includes(r.status))out.push({key:sessKey(rec.date,rec.classId),date:rec.date,classId:rec.classId,status:r.status});
+  }
+  return out.sort((a,b)=>a.date.localeCompare(b.date));
+}
+function paidKeysOf(sid){
+  const set=new Set();
+  DB.payments.forEach(p=>{if(p.studentId===sid)(p.sessionKeys||[]).forEach(k=>set.add(k));});
+  return set;
+}
+function unpaidSessionsOf(sid){
+  const pk=paidKeysOf(sid);
+  return billableSessionsOf(sid).filter(x=>!pk.has(x.key));
+}
+function unpaidAmount(sid){const s=studentById(sid);return s?unpaidSessionsOf(sid).length*(+s.rate||0):0;}
+function paidRecently(days){
+  const cut=addDaysISO(-days);
+  return DB.payments.filter(p=>(p.paidAt||'')>=cut).reduce((t,p)=>t+(+p.amount||0),0);
+}
+function rangeLabel(list){
+  if(!list.length)return '';
+  const a=fmtDShort(list[0].date),b=fmtDShort(list[list.length-1].date);
+  return a===b?a:(a+' – '+b);
+}
 
 /* ========== ĐIỀU HƯỚNG / MODAL / TOAST ========== */
 let cur='dash';
@@ -829,10 +886,12 @@ function renderDash(){
   const todayCls=classesOnDay(dow,today);
   const openCls=DB.classes.filter(c=>classStatusInfo(c).k==='open').length;
   const taught=DB.attendance.filter(a=>a.date.startsWith(m)).length;
-  let fee=0,paid=0;
-  DB.students.forEach(s=>{fee+=monthFee(s.id,m);paid+=monthPaid(s.id,m);});
-  const remainList=DB.students.map(s=>({s,fee:monthFee(s.id,m),paid:monthPaid(s.id,m)}))
-    .map(x=>({...x,remain:x.fee-x.paid})).filter(x=>x.remain>0).sort((a,b)=>b.remain-a.remain);
+  const owedList=DB.students.map(s=>({s,list:unpaidSessionsOf(s.id)}))
+    .map(x=>({...x,remain:x.list.length*(+x.s.rate||0)}))
+    .filter(x=>x.list.length>0).sort((a,b)=>b.remain-a.remain);
+  const owedSess=owedList.reduce((t,x)=>t+x.list.length,0);
+  const owedMoney=owedList.reduce((t,x)=>t+x.remain,0);
+  const paid30=paidRecently(30);
   const dayName=DAYS.find(d=>d.v===dow).l;
   let html='';
   if(FB.ann)html+='<div class="ann-banner">'+ic('alert')+'<div><b>Thông báo:</b> '+H(FB.ann)+'</div></div>';
@@ -847,9 +906,9 @@ function renderDash(){
     +'<div class="stat"><div class="l">Đang học</div><div class="v ink-pri">'+active.length+'</div><div class="s">/ '+DB.students.length+' học sinh</div></div>'
     +'<div class="stat"><div class="l">Ca hôm nay</div><div class="v">'+todayCls.length+'</div><div class="s">'+openCls+' ca đang mở</div></div>'
     +'<div class="stat"><div class="l">Buổi đã dạy</div><div class="v ink-sky">'+taught+'</div><div class="s">trong '+monthLabel(m)+'</div></div>'
-    +'<div class="stat"><div class="l">Học phí dự kiến</div><div class="v">'+fmtM(fee)+'</div><div class="s">'+monthLabel(m)+'</div></div>'
-    +'<div class="stat"><div class="l">Đã thu</div><div class="v ink-grn">'+fmtM(paid)+'</div><div class="s">'+(fee>0?Math.round(paid/fee*100)+'%':'—')+'</div></div>'
-    +'<div class="stat"><div class="l">Còn lại</div><div class="v '+(fee-paid>0?'ink-red':'ink-grn')+'">'+fmtM(Math.max(0,fee-paid))+'</div><div class="s">cần thu</div></div>'
+    +'<div class="stat"><div class="l">Buổi chờ thanh toán</div><div class="v">'+owedSess+'</div><div class="s">'+owedList.length+' học sinh</div></div>'
+    +'<div class="stat"><div class="l">Tiền chờ thu</div><div class="v '+(owedMoney>0?'ink-red':'ink-grn')+'">'+fmtM(owedMoney)+'</div><div class="s">mọi buổi chưa chốt</div></div>'
+    +'<div class="stat"><div class="l">Đã thu 30 ngày</div><div class="v ink-grn">'+fmtM(paid30)+'</div><div class="s">gần nhất</div></div>'
     +'</div>';
   html+='<div class="grid2">';
   // Hôm nay
@@ -864,14 +923,14 @@ function renderDash(){
   });
   html+='</div>';
   // Học phí cần thu
-  html+='<div class="card"><h3>'+ic('credit-card')+' Chưa thu đủ học phí ('+monthLabel(m)+')</h3>';
-  if(!remainList.length)html+='<div class="empty"><div class="big">'+ic('check-circle',34)+'</div>Đã thu đủ học phí của tất cả học sinh!</div>';
+  html+='<div class="card"><h3>'+ic('credit-card')+' Chờ thanh toán</h3>';
+  if(!owedList.length)html+='<div class="empty"><div class="big">'+ic('check-circle',34)+'</div>Không còn buổi nào chờ thanh toán!</div>';
   else{
-    remainList.slice(0,6).forEach(x=>{
-      html+='<div class="list-item"><div class="stu-cell">'+avatar(x.s,'av-sm')+'<div><div class="nm" onclick="openProfile(\''+x.s.id+'\')">'+H(x.s.name)+'</div><div class="sub">'+countBillable(x.s.id,m)+' buổi · đã thu '+fmtM(x.paid)+'</div></div></div>'
-        +'<div class="flex"><b style="color:var(--red)">'+fmtM(x.remain)+'</b><button class="btn btn-xs btn-ghost" data-tip="Sang trang Học phí để thu tiền" onclick="nav(\'fees\')">Thu</button></div></div>';
+    owedList.slice(0,6).forEach(x=>{
+      html+='<div class="list-item"><div class="stu-cell">'+avatar(x.s,'av-sm')+'<div><div class="nm" onclick="openProfile(\''+x.s.id+'\')">'+H(x.s.name)+'</div><div class="sub">'+x.list.length+' buổi · '+rangeLabel(x.list)+'</div></div></div>'
+        +'<div class="flex"><b style="color:var(--red)">'+fmtM(x.remain)+'</b><button class="btn btn-xs btn-grn" data-tip="Tick buổi → xác nhận → in phiếu" onclick="openSettle(\''+x.s.id+'\')">Chốt</button></div></div>';
     });
-    if(remainList.length>6)html+='<div class="right mt"><a onclick="nav(\'fees\')">Xem tất cả ('+remainList.length+') →</a></div>';
+    if(owedList.length>6)html+='<div class="right mt"><a onclick="nav(\'fees\')">Xem tất cả ('+owedList.length+') →</a></div>';
   }
   html+='</div></div>';
   // Điểm KT gần đây
@@ -1174,7 +1233,8 @@ function openProfile(id){
   const m=curMonth();
   const cls=classesOfStudent(id);
   const atts=attOfStudentMonth(id,m);
-  const nBill=countBillable(id,m), fee=monthFee(id,m), paid=monthPaid(id,m);
+  const unpaidL=unpaidSessionsOf(id), owed=unpaidL.length*(+s.rate||0);
+  const lastPay=DB.payments.filter(p=>p.studentId===id).sort((a,b)=>(b.paidAt||'').localeCompare(a.paidAt||''))[0];
   const scores=DB.scores.filter(x=>x.studentId===id).sort((a,b)=>b.date.localeCompare(a.date));
   const cnt={present:0,late:0,excused:0,absent:0}; atts.forEach(a=>cnt[a.status]!==undefined&&cnt[a.status]++);
   let html=mHead('<span class="flex">'+avatar(s)+' '+H(s.name)+' <span class="bd '+STATUS_BD[s.status]+'">'+STATUS_LABEL[s.status]+'</span></span>');
@@ -1192,10 +1252,9 @@ function openProfile(id){
     +'</div>';
   html+='<div class="card mt" style="margin-bottom:10px;box-shadow:none"><h3>'+ic('calendar')+' '+monthLabel(m).replace('t','T')+'</h3>'
     +'<div class="flex small"><span class="bd bd-grn">Có mặt '+cnt.present+'</span><span class="bd bd-amb">Muộn '+cnt.late+'</span><span class="bd bd-sky">Vắng CP '+cnt.excused+'</span><span class="bd bd-red">Vắng KP '+cnt.absent+'</span></div>'
-    +'<div class="kv mt"><div class="k">Buổi tính phí</div><div><b>'+nBill+'</b> buổi</div>'
-    +'<div class="k">Học phí</div><div><b>'+fmtM(fee)+'</b></div>'
-    +'<div class="k">Đã thu</div><div style="color:var(--grn)"><b>'+fmtM(paid)+'</b>'+(fee>0&&paid>=fee?' ✓':'')+'</div>'
-    +(fee-paid>0?'<div class="k">Còn lại</div><div style="color:var(--red)"><b>'+fmtM(fee-paid)+'</b></div>':'')
+    +'<div class="kv mt"><div class="k">Chưa thanh toán</div><div>'+(unpaidL.length?'<b style="color:var(--red)">'+unpaidL.length+' buổi · '+fmtM(owed)+'</b> <span class="muted small">('+rangeLabel(unpaidL)+')</span>':'<b style="color:var(--grn)">0 buổi ✓</b>')+'</div>'
+    +'<div class="k">Chốt gần nhất</div><div>'+(lastPay?fmtD(lastPay.paidAt)+' · '+(lastPay.sessions||(lastPay.sessionKeys||[]).length)+' buổi · '+fmtM(lastPay.amount):'—')+'</div>'
+    +(unpaidL.length?'<div class="k"></div><div><button class="btn btn-xs btn-grn" onclick="closeModal(true);openSettle(\''+id+'\')">'+ic('check')+' Chốt &amp; in phiếu</button></div>':'')
     +'</div></div>';
   if(scores.length){
     html+='<div class="card" style="box-shadow:none;margin-bottom:10px"><h3>'+ic('bar-chart')+' Điểm kiểm tra gần đây</h3>';
@@ -1458,9 +1517,8 @@ function classRecapData(c){
   (c.studentIds||[]).forEach(id=>{if(studentById(id)&&per[id]===undefined)per[id]=0;});
   const students=Object.keys(per).map(id=>{
     const s=studentById(id),n=per[id],money=n*(+s.rate||0);
-    let feeAll=0,paidAll=0;
-    months.forEach(m=>{feeAll+=monthFee(id,m);paidAll+=monthPaid(id,m);});
-    return {s,n,money,feeAll,paidAll};
+    const un=unpaidSessionsOf(id);
+    return {s,n,money,unpaid:un.length,unpaidMoney:un.length*(+s.rate||0)};
   }).sort((a,b)=>a.s.name.localeCompare(b.s.name,'vi'));
   return {sessions:recs.length,months:[...months].sort(),revenue:students.reduce((t,x)=>t+x.money,0),students};
 }
@@ -1474,16 +1532,14 @@ function openClassRecap(id){
     +'<div class="k">Học phí phát sinh</div><div><b>'+fmtM(r.revenue)+'</b> từ ca này</div></div>';
   if(!r.students.length)html+='<div class="empty">Chưa có dữ liệu điểm danh cho ca này.</div>';
   else{
-    html+='<div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Học sinh</th><th class="num">Buổi (ca này)</th><th class="num">Thành tiền</th><th class="num">Phí các tháng*</th><th class="num">Đã thu</th><th>Trạng thái</th></tr></thead><tbody>';
+    html+='<div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Học sinh</th><th class="num">Buổi (ca này)</th><th class="num">Thành tiền</th><th class="num">Chưa thanh toán*</th><th>Trạng thái</th></tr></thead><tbody>';
     r.students.forEach(x=>{
-      const ok=x.paidAll>=x.feeAll&&x.feeAll>0;
       html+='<tr><td><div class="stu-cell">'+avatar(x.s,'av-sm')+'<span class="nm" onclick="closeModal();openProfile(\''+x.s.id+'\')">'+H(x.s.name)+'</span></div></td>'
         +'<td class="num">'+x.n+'</td><td class="num"><b>'+fmtM(x.money)+'</b></td>'
-        +'<td class="num">'+fmtM(x.feeAll)+'</td>'
-        +'<td class="num" style="color:'+(ok?'var(--grn)':'var(--rust)')+'">'+fmtM(x.paidAll)+'</td>'
-        +'<td>'+(x.feeAll<=0?'<span class="bd bd-gray">—</span>':(ok?'<span class="bd bd-grn">Đã thu đủ</span>':(x.paidAll>0?'<span class="bd bd-amb">Thu một phần</span>':'<span class="bd bd-red">Chưa thu</span>')))+'</td></tr>';
+        +'<td class="num" style="color:'+(x.unpaid>0?'var(--red)':'var(--grn)')+'">'+(x.unpaid>0?x.unpaid+' buổi · '+fmtM(x.unpaidMoney):'0\u00A0₫')+'</td>'
+        +'<td>'+(x.unpaid<=0?'<span class="bd bd-grn">Đã thanh toán hết</span>':'<span class="bd bd-red">Còn '+x.unpaid+' buổi</span>')+'</td></tr>';
     });
-    html+='</tbody></table></div><div class="hint mt">* Phí các tháng &amp; Đã thu tính trên toàn bộ học phí của em trong các tháng ca hoạt động ('+r.months.map(monthLabel).join(', ')+'), gồm cả ca khác nếu học song song.</div>';
+    html+='</tbody></table></div><div class="hint mt">* Tính trên MỌI buổi chưa chốt của em (kể cả ca khác). Bấm tên để mở hồ sơ và Chốt &amp; in phiếu.</div>';
   }
   html+='<div class="m-foot"><button class="btn btn-pri" onclick="closeModal()">Đóng</button></div>';
   openModal(html,true);
@@ -1624,110 +1680,156 @@ function attStatsHTML(){
   return h+'</tbody></table></div></div>';
 }
 /* ========== HỌC PHÍ ========== */
-let feeMonth=curMonth();
-function feeRows(m){
+/* Học phí theo buổi — không còn chọn tháng */
+function unpaidRows(){
   return DB.students.map(s=>{
-    const n=countBillable(s.id,m),fee=monthFee(s.id,m),paid=monthPaid(s.id,m);
-    return {s,n,fee,paid,remain:fee-paid};
-  }).filter(r=>r.n>0||r.paid>0||r.s.status==='active')
-    .sort((a,b)=>b.remain-a.remain||a.s.name.localeCompare(b.s.name,'vi'));
-}
-function feeStatus(r){
-  if(r.fee===0&&r.paid===0)return '<span class="bd bd-gray">Chưa có buổi</span>';
-  if(r.remain<=0&&r.fee>0)return '<span class="bd bd-grn">✓ Đã thu đủ</span>';
-  if(r.paid>0)return '<span class="bd bd-amb">Thu một phần</span>';
-  return '<span class="bd bd-red">Chưa thu</span>';
+    const list=unpaidSessionsOf(s.id);
+    return {s,list,amount:list.length*(+s.rate||0)};
+  }).filter(x=>x.list.length>0).sort((a,b)=>b.amount-a.amount);
 }
 function renderFees(){
-  const m=feeMonth,rows=feeRows(m);
-  const tFee=rows.reduce((t,r)=>t+r.fee,0),tPaid=rows.reduce((t,r)=>t+r.paid,0);
-  let html='<div class="ph"><div><div class="pt">Học phí</div><div class="psub">Số buổi × đơn giá, tự tính từ điểm danh</div></div>'
-    +'<div class="flex"><button class="btn btn-ghost" data-tip="In / lưu PDF phiếu của tất cả học sinh có buổi trong tháng" onclick="printAllSlips()">'+ic('printer')+' In phiếu cả tháng</button>'
-    +'<input class="inp" type="month" style="max-width:170px" value="'+m+'" onchange="feeMonth=this.value;renderFees()"></div></div>';
+  const rows=unpaidRows();
+  const owedSess=rows.reduce((t,r)=>t+r.list.length,0);
+  const owedMoney=rows.reduce((t,r)=>t+r.amount,0);
+  const paid30=paidRecently(30);
+  const clear=DB.students.filter(s=>s.status!=='stopped'&&!rows.some(r=>r.s.id===s.id)&&billableSessionsOf(s.id).length>0);
+  let html='<div class="ph"><div><div class="pt">Học phí</div><div class="psub">Tick buổi đã dạy → xác nhận → in phiếu — buổi được đánh dấu đã thanh toán</div></div></div>';
   html+='<div class="stats">'
-    +'<div class="stat"><div class="l">Dự kiến</div><div class="v">'+fmtM(tFee)+'</div></div>'
-    +'<div class="stat"><div class="l">Đã thu</div><div class="v ink-grn">'+fmtM(tPaid)+'</div></div>'
-    +'<div class="stat"><div class="l">Còn lại</div><div class="v '+(tFee-tPaid>0?'ink-red':'ink-grn')+'">'+fmtM(Math.max(0,tFee-tPaid))+'</div>'
-    +'<div class="prog"><div style="width:'+(tFee>0?Math.min(100,Math.round(tPaid/tFee*100)):0)+'%"></div></div></div></div>';
+    +'<div class="stat"><div class="l">Buổi chờ thanh toán</div><div class="v ink-pri">'+owedSess+'</div><div class="s">'+rows.length+' học sinh</div></div>'
+    +'<div class="stat"><div class="l">Tiền chờ thu</div><div class="v '+(owedMoney>0?'ink-red':'ink-grn')+'">'+fmtM(owedMoney)+'</div><div class="s">mọi buổi chưa chốt</div></div>'
+    +'<div class="stat"><div class="l">Đã thu 30 ngày</div><div class="v ink-grn">'+fmtM(paid30)+'</div><div class="s">'+DB.payments.filter(p=>(p.paidAt||'')>=addDaysISO(-30)).length+' lần chốt</div></div>'
+    +'</div>';
   html+='<div class="card">';
-  if(!rows.length)html+='<div class="empty"><div class="big">'+ic('credit-card',34)+'</div>Chưa có dữ liệu học phí trong '+monthLabel(m)+'.<br>Học phí được tính tự động khi bạn điểm danh.</div>';
-  else{
-    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Học sinh</th><th class="num">Buổi</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th><th class="num">Đã thu</th><th class="num">Còn lại</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
+  if(!rows.length){
+    html+='<div class="empty"><div class="big">'+ic('check-circle',34)+'</div>Không còn buổi nào chờ thanh toán.<br>Buổi mới xuất hiện ở đây ngay sau khi bạn điểm danh.</div>';
+  }else{
+    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Học sinh</th><th class="num">Buổi chờ</th><th>Khoảng ngày</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th><th></th></tr></thead><tbody>';
     rows.forEach(r=>{
       html+='<tr><td><div class="stu-cell">'+avatar(r.s,'av-sm')+'<div><div class="nm" onclick="openProfile(\''+r.s.id+'\')">'+H(r.s.name)+'</div><div class="sub">'+H(r.s.subject||'')+'</div></div></div></td>'
-        +'<td class="num"><b>'+r.n+'</b></td>'
+        +'<td class="num"><b>'+r.list.length+'</b></td>'
+        +'<td class="small">'+rangeLabel(r.list)+'</td>'
         +'<td class="num">'+fmtM(r.s.rate)+'</td>'
-        +'<td class="num"><b>'+fmtM(r.fee)+'</b></td>'
-        +'<td class="num" style="color:var(--grn)">'+(r.paid?fmtM(r.paid):'·')+'</td>'
-        +'<td class="num" style="color:'+(r.remain>0?'var(--red)':'var(--grn)')+'"><b>'+(r.remain>0?fmtM(r.remain):'0\u00A0₫')+'</b></td>'
-        +'<td>'+feeStatus(r)+'</td>'
+        +'<td class="num"><b style="color:var(--red)">'+fmtM(r.amount)+'</b></td>'
         +'<td class="right" style="white-space:nowrap">'
-        +(r.remain>0?'<button class="btn btn-xs btn-grn" data-tip="Ghi nhận thu tiền tháng này" onclick="openPay(\''+r.s.id+'\')">Thu</button> ':'')
-        +'<button class="btn btn-xs btn-ghost" data-tip="Phiếu học phí (in được)" onclick="openFeeSlip(\''+r.s.id+'\')">'+ic('file')+'</button> '
+        +'<button class="btn btn-xs btn-grn" data-tip="Tick buổi → xác nhận → in phiếu" onclick="openSettle(\''+r.s.id+'\')">'+ic('check')+' Chốt &amp; in phiếu</button> '
         +'<button class="btn btn-xs btn-ghost" data-tip="Sao chép tin nhắn nhắc phí" onclick="copyFeeMsg(\''+r.s.id+'\')">'+ic('message')+'</button> '
-        +'<button class="btn btn-xs btn-ghost" data-tip="Lịch sử thu" onclick="openPayHistory(\''+r.s.id+'\')">'+ic('file-text')+'</button></td></tr>';
+        +'<button class="btn btn-xs btn-ghost" data-tip="Các lần chốt trước: in lại / huỷ" onclick="openPayHistory(\''+r.s.id+'\')">'+ic('file-text')+'</button></td></tr>';
     });
-    html+='</tbody><tfoot><tr class="tfoot"><td>Tổng ('+rows.length+' HS)</td><td class="num">'+rows.reduce((t,r)=>t+r.n,0)+'</td><td></td>'
-      +'<td class="num">'+fmtM(tFee)+'</td><td class="num">'+fmtM(tPaid)+'</td><td class="num">'+fmtM(Math.max(0,tFee-tPaid))+'</td><td></td><td></td></tr></tfoot></table></div>';
-    html+='<div class="hint mt">Di chuột lên các nút trong bảng để xem chú thích.'+(DB.settings.chargeUnexcused?' · Đang tính phí cả buổi vắng không phép':' · Buổi "Vắng KP" hiện KHÔNG tính phí (đổi trong Cài đặt)')+'</div>';
+    html+='</tbody><tfoot><tr class="tfoot"><td>Tổng ('+rows.length+' HS)</td><td class="num">'+owedSess+'</td><td></td><td></td><td class="num">'+fmtM(owedMoney)+'</td><td></td></tr></tfoot></table></div>';
+    html+='<div class="hint mt">Buổi "Có mặt" và "Muộn" được tính phí'+(DB.settings.chargeUnexcused?' (đang tính cả vắng không phép — đổi trong Cài đặt)':' — vắng KP hiện KHÔNG tính (đổi trong Cài đặt)')+'. Nợ vắt tháng (VD cuối tháng 6 sang tháng 7) gom chung một phiếu.</div>';
   }
   html+='</div>';
+  if(clear.length){
+    html+='<div class="card mt"><h3>'+ic('check-circle')+' Đã thanh toán hết</h3><div class="flex" style="flex-wrap:wrap">'
+      +clear.map(s=>'<span class="bd bd-grn" style="cursor:pointer" data-tip="Xem các lần chốt" onclick="openPayHistory(\''+s.id+'\')">✓ '+H(s.name)+'</span>').join(' ')
+      +'</div></div>';
+  }
   document.getElementById('page-fees').innerHTML=html;
 }
-function openPay(sid){
+
+/* ----- Chốt học phí: tick buổi → xác nhận & in ----- */
+function openSettle(sid){
   const s=studentById(sid); if(!s)return;
-  const m=feeMonth,fee=monthFee(sid,m),paid=monthPaid(sid,m),remain=Math.max(0,fee-paid);
-  openModal(mHead('Thu học phí – '+H(s.name))
-    +'<div class="kv mb"><div class="k">Tháng</div><div>'+monthLabel(m)+'</div>'
-    +'<div class="k">Học phí</div><div>'+countBillable(sid,m)+' buổi × '+fmtM(s.rate)+' = <b>'+fmtM(fee)+'</b></div>'
-    +'<div class="k">Đã thu</div><div>'+fmtM(paid)+'</div></div>'
-    +'<div class="fg">'
-    +'<div><label class="lb">Số tiền thu (đ)</label><input class="inp" type="number" id="pm_amount" value="'+(remain||fee)+'" step="10000" min="0"></div>'
-    +'<div><label class="lb">Ngày thu</label><input class="inp" type="date" id="pm_date" value="'+todayStr()+'"></div>'
-    +'<div><label class="lb">Hình thức</label><select class="inp" id="pm_method"><option>Chuyển khoản</option><option>Tiền mặt</option><option>Khác</option></select></div>'
-    +'<div><label class="lb">Ghi chú</label><input class="inp" id="pm_note" placeholder="VD: mẹ chuyển khoản"></div>'
-    +'</div><div class="m-foot"><button class="btn btn-ghost" onclick="closeModal()">Huỷ</button><button class="btn btn-grn" data-tip="Lưu lần thu này vào sổ" onclick="savePay(\''+sid+'\')">'+ic('check')+' Xác nhận thu</button></div>');
+  const list=unpaidSessionsOf(sid);
+  if(!list.length){toast('Em này không còn buổi chưa thanh toán');return;}
+  let html=mHead('Chốt học phí – '+H(s.name));
+  html+='<div class="hint mb">Tick các buổi muốn thu lần này (mặc định chọn hết). Xác nhận xong phiếu sẽ mở để in và các buổi được đánh dấu <b>đã thanh toán</b>.</div>';
+  html+='<div class="spread mb"><label class="small" style="cursor:pointer"><input type="checkbox" id="st_all" checked onchange="settleAll(this.checked)"> Chọn tất cả</label>'
+    +'<span class="small muted">'+list.length+' buổi · đơn giá '+fmtM(s.rate)+'</span></div>';
+  html+='<div class="tbl-wrap" style="max-height:320px;overflow-y:auto"><table class="tbl"><tbody>';
+  list.forEach((x,i)=>{
+    const c=classById(x.classId);
+    html+='<tr><td style="width:34px"><input type="checkbox" class="st_cb" data-key="'+H(x.key)+'" checked onchange="settleUpdate(\''+sid+'\')"></td>'
+      +'<td><b>'+fmtD(x.date)+'</b></td>'
+      +'<td>'+(c?'<span class="tag" style="background:'+c.color+'22;color:'+c.color+'">'+H(c.name)+'</span>':'<span class="muted small">(ca đã xoá)</span>')+'</td>'
+      +'<td class="small">'+(x.status==='late'?'<span class="bd bd-amb">Muộn</span>':(x.status==='absent'?'<span class="bd bd-red">Vắng KP</span>':'<span class="bd bd-grn">Có mặt</span>'))+'</td></tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="fg mt">'
+    +'<div><label class="lb">Hình thức</label><select class="inp" id="st_method"><option>Chuyển khoản</option><option>Tiền mặt</option><option>Khác</option></select></div>'
+    +'<div><label class="lb">Ngày chốt</label><input class="inp" type="date" id="st_date" value="'+todayStr()+'"></div>'
+    +'</div>'
+    +'<div class="mt"><label class="lb">Nhận xét in trên phiếu (tuỳ chọn)</label><input class="inp" id="st_note" placeholder="VD: Em học chăm, tiến bộ rõ phần hình học"></div>';
+  html+='<div class="kv mt" style="border-top:3px double var(--ink);padding-top:10px"><div class="k">Tổng lần này</div><div id="st_total" style="font-size:20px;font-weight:800">'+fmtM(list.length*s.rate)+'</div></div>';
+  html+='<div class="m-foot"><button class="btn btn-ghost" onclick="closeModal()">Huỷ</button>'
+    +'<button class="btn btn-grn" data-tip="Tạo phiếu, mở hộp in, đánh dấu các buổi đã thanh toán" onclick="confirmSettle(\''+sid+'\')">'+ic('printer')+' XÁC NHẬN &amp; IN PHIẾU</button></div>';
+  openModal(html,true);
   armFormGuard();
 }
-function savePay(sid){
-  const amount=+document.getElementById('pm_amount').value||0;
-  if(amount<=0){toast('Nhập số tiền hợp lệ');return;}
-  DB.payments.push({id:uid(),studentId:sid,month:feeMonth,amount,
-    paidAt:document.getElementById('pm_date').value||todayStr(),
-    method:document.getElementById('pm_method').value,note:document.getElementById('pm_note').value.trim()});
-  save();closeModal(true);toast('Đã ghi nhận '+fmtM(amount));rerender();
+function settleAll(on){document.querySelectorAll('.st_cb').forEach(cb=>{cb.checked=on;});const m=document.querySelector('.modal .st_cb');if(m)settleUpdate(m0SettleSid);}
+let m0SettleSid='';
+function settleUpdate(sid){
+  m0SettleSid=sid;
+  const s=studentById(sid); if(!s)return;
+  const n=document.querySelectorAll('.st_cb:checked').length;
+  const el=document.getElementById('st_total');
+  if(el)el.innerHTML=n+' buổi × '+fmtM(s.rate)+' = <b>'+fmtM(n*s.rate)+'</b>';
+  const all=document.getElementById('st_all');
+  if(all)all.checked=(n===document.querySelectorAll('.st_cb').length);
 }
+function confirmSettle(sid){
+  const s=studentById(sid); if(!s)return;
+  const keys=[...document.querySelectorAll('.st_cb:checked')].map(cb=>cb.dataset.key);
+  if(!keys.length){toast('Chọn ít nhất 1 buổi');return;}
+  const pk=paidKeysOf(sid);
+  const fresh=keys.filter(k=>!pk.has(k));
+  const p={id:uid(),studentId:sid,sessionKeys:fresh,sessions:fresh.length,rate:+s.rate||0,
+    amount:fresh.length*(+s.rate||0),
+    paidAt:(document.getElementById('st_date')||{}).value||todayStr(),
+    method:(document.getElementById('st_method')||{}).value||'Chuyển khoản',
+    note:((document.getElementById('st_note')||{}).value||'').trim()};
+  DB.payments.push(p);
+  save(); closeModal(true);
+  toast('Đã chốt '+fresh.length+' buổi — '+fmtM(p.amount));
+  printPayment(p.id);
+  rerender();
+}
+
+/* ----- Lịch sử các lần chốt ----- */
 function openPayHistory(sid){
   const s=studentById(sid); if(!s)return;
   const list=DB.payments.filter(p=>p.studentId===sid).sort((a,b)=>(b.paidAt||'').localeCompare(a.paidAt||''));
   let html=mHead('Lịch sử thu – '+H(s.name));
-  if(!list.length)html+='<div class="empty">Chưa có lần thu nào.</div>';
+  if(!list.length)html+='<div class="empty">Chưa có lần chốt nào.</div>';
   else{
-    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Ngày</th><th>Cho tháng</th><th class="num">Số tiền</th><th>Hình thức</th><th></th></tr></thead><tbody>';
+    html+='<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Ngày chốt</th><th class="num">Buổi</th><th>Khoảng ngày</th><th class="num">Số tiền</th><th>Hình thức</th><th></th></tr></thead><tbody>';
     list.forEach(p=>{
-      html+='<tr><td>'+fmtD(p.paidAt)+'</td><td>'+monthLabel(p.month)+(p.note?'<div class="muted small">'+H(p.note)+'</div>':'')+'</td>'
+      const ss=(p.sessionKeys||[]).map(k=>({date:k.split('|')[0]})).sort((a,b)=>a.date.localeCompare(b.date));
+      html+='<tr><td>'+fmtD(p.paidAt)+(p.note?'<div class="muted small">'+H(p.note)+'</div>':'')+'</td>'
+        +'<td class="num"><b>'+(p.sessions||ss.length||'—')+'</b></td>'
+        +'<td class="small">'+(ss.length?rangeLabel(ss):(p.month?monthLabel(p.month)+' (bản ghi cũ)':'—'))+'</td>'
         +'<td class="num"><b>'+fmtM(p.amount)+'</b></td><td class="small">'+H(p.method||'')+'</td>'
-        +'<td class="right"><button class="btn btn-xs btn-danger" data-tip="Xoá lần thu này" onclick="delPayment(\''+p.id+'\',\''+sid+'\')">'+ic('trash')+'</button></td></tr>';
+        +'<td class="right" style="white-space:nowrap">'
+        +'<button class="btn btn-xs btn-ghost" data-tip="In lại phiếu của lần chốt này" onclick="printPayment(\''+p.id+'\')">'+ic('printer')+'</button> '
+        +'<button class="btn btn-xs btn-danger" data-tip="Huỷ lần chốt — các buổi trở lại chưa thanh toán" onclick="cancelPayment(\''+p.id+'\',\''+sid+'\')">'+ic('trash')+'</button></td></tr>';
     });
-    html+='</tbody></table></div><div class="hint mt">Tổng đã thu: <b>'+fmtM(list.reduce((t,p)=>t+(+p.amount||0),0))+'</b></div>';
+    html+='</tbody></table></div><div class="hint mt">Tổng đã thu: <b>'+fmtM(list.reduce((t,p)=>t+(+p.amount||0),0))+'</b> · Huỷ lần chốt sẽ trả các buổi về trạng thái chưa thanh toán.</div>';
   }
   html+='<div class="m-foot"><button class="btn btn-pri" onclick="closeModal()">Đóng</button></div>';
-  openModal(html);
+  openModal(html,true);
 }
-function delPayment(pid,sid){
-  if(!confirm('Xoá lần thu này?'))return;
-  DB.payments=DB.payments.filter(p=>p.id!==pid);
-  save();toast('Đã xoá');openPayHistory(sid);rerender();
+function cancelPayment(pid,sid){
+  const p=DB.payments.find(x=>x.id===pid);
+  if(!p)return;
+  if(!confirm('Huỷ lần chốt này? '+(p.sessions||(p.sessionKeys||[]).length)+' buổi sẽ trở lại "chưa thanh toán".'))return;
+  DB.payments=DB.payments.filter(x=>x.id!==pid);
+  save();toast('Đã huỷ lần chốt');openPayHistory(sid);rerender();
 }
 
 /* ========== TIN NHẮN MẪU / LIÊN LẠC ========== */
-function msgFee(s,m){
-  const n=countBillable(s.id,m),fee=monthFee(s.id,m),paid=monthPaid(s.id,m),remain=fee-paid;
-  let t='Kính chào anh/chị – phụ huynh em '+s.name+'.\n'
-    +'Trong '+monthLabel(m)+', em đã học '+n+' buổi'+(s.subject?' môn '+s.subject:'')+'. '
-    +'Học phí là '+fmtM(fee)+(paid>0?' (đã thanh toán '+fmtM(paid)+', còn lại '+fmtM(Math.max(0,remain))+')':'')+'.';
-  if(DB.settings.bankInfo)t+='\n'+DB.settings.bankInfo;
-  t+='\nNhờ anh/chị sắp xếp giúp ạ. Trân trọng cảm ơn!\n– '+(DB.settings.name||'Giáo viên');
+function msgFee(s){
+  const list=unpaidSessionsOf(s.id);
+  const n=list.length, amount=n*(+s.rate||0);
+  let t='Kính chào anh/chị – phụ huynh em '+s.name+'.\n';
+  if(n>0){
+    t+='Em đã học '+n+' buổi chưa thanh toán ('+rangeLabel(list)+')'+(s.subject?' môn '+s.subject:'')+'.\n'
+      +'Học phí: '+n+' buổi × '+fmtM(s.rate)+' = '+fmtM(amount)+'.';
+  }else{
+    t+='Hiện em không còn buổi học nào chưa thanh toán. Cảm ơn anh/chị!';
+  }
+  if(n>0&&DB.settings.bankInfo)t+='\n'+DB.settings.bankInfo;
+  if(n>0)t+='\nNhờ anh/chị sắp xếp giúp ạ. Trân trọng cảm ơn!';
+  t+='\n– '+(DB.settings.name||'Giáo viên');
   return t;
 }
 function msgReport(s,m){
@@ -1746,11 +1848,11 @@ function msgOff(s){
   return 'Thông báo: Lớp'+(cls.length?' '+cls[0].name:'')+' xin phép NGHỈ buổi ngày ... do ... .\n'
     +'Lịch học bù sẽ được thông báo sau. Mong anh/chị thông cảm!\n– '+(DB.settings.name||'Giáo viên');
 }
-function copyFeeMsg(sid){const s=studentById(sid);if(s)copyText(msgFee(s,feeMonth||curMonth()));}
+function copyFeeMsg(sid){const s=studentById(sid);if(s)copyText(msgFee(s));}
 function openMsgTemplates(sid){
   const s=studentById(sid); if(!s)return;
   const m=curMonth();
-  const tpls=[['Nhắc học phí',msgFee(s,m)],['Báo cáo học tập',msgReport(s,m)],['Thông báo nghỉ học',msgOff(s)]];
+  const tpls=[['Nhắc học phí',msgFee(s)],['Báo cáo học tập',msgReport(s,m)],['Thông báo nghỉ học',msgOff(s)]];
   let html=mHead('Mẫu tin nhắn – '+H(s.name));
   html+='<div class="hint mb">Bấm "Sao chép" rồi dán vào Zalo/SMS gửi phụ huynh.'+(s.parentPhone?' <a href="https://zalo.me/'+phoneDigits(s.parentPhone)+'" target="_blank">Mở Zalo của PH →</a>':'')+'</div>';
   tpls.forEach((t,i)=>{
@@ -2227,21 +2329,20 @@ function moneyToWordsVN(n){
 }
 const SLIP_FLEURON='<svg width="15" height="15" viewBox="0 0 24 24" fill="#B08D3F"><path d="M12 2.5c2 2.8 1.3 5.4-.5 6.9C9.7 7.9 9.2 5.2 12 2.5Z"/><path d="M12 21.5c-2-2.8-1.3-5.4.5-6.9 1.8 1.5 2.3 4.2-.5 6.9Z"/><path d="M2.5 12c2.8-2 5.4-1.3 6.9.5-1.5 1.8-4.2 2.3-6.9-.5Z"/><path d="M21.5 12c-2.8 2-5.4 1.3-6.9-.5 1.5-1.8 4.2-2.3 6.9.5Z"/><circle cx="12" cy="12" r="1.6"/></svg>';
 function slipCorner(pos){return '<svg class="sf-'+pos+'" viewBox="0 0 30 30" fill="none"><path d="M2 28V10Q2 2 10 2h18" stroke="#B08D3F" stroke-width="1.6"/><path d="M7.5 28V13.5Q7.5 7.5 13.5 7.5H28" stroke="#B08D3F" stroke-width="1" opacity=".55"/><circle cx="8" cy="8" r="1.7" fill="#B08D3F"/></svg>';}
-function slipCardHTML(s,m){
+function slipCardHTMLPay(p){
+  const s=studentById(p.studentId); if(!s)return '';
   const cls=classesOfStudent(s.id);
   const C=cls.length?cls[0].color:'#93392C';
-  const atts=attOfStudentMonth(s.id,m),bs=billableStatuses();
-  const billDates=atts.filter(a=>bs.includes(a.status));
-  const absents=atts.filter(a=>!bs.includes(a.status));
-  const n=billDates.length,fee=n*(+s.rate||0),paid=monthPaid(s.id,m),remain=Math.max(0,fee-paid);
-  const note=(DB.slipNotes[s.id+'|'+m]||'').trim();
-  const mm=m.split('-')[1],yy=m.split('-')[0];
-  const no='T'+mm+'-'+String(DB.students.findIndex(x=>x.id===s.id)+1).padStart(3,'0');
+  const sess=(p.sessionKeys||[]).map(k=>({date:k.split('|')[0],classId:k.split('|')[1]})).sort((a,b)=>a.date.localeCompare(b.date));
+  const n=p.sessions||sess.length;
+  const amount=+p.amount||0;
+  const idx=DB.payments.filter(x=>x.studentId===s.id).sort((a,b)=>(a.paidAt||'').localeCompare(b.paidAt||'')).findIndex(x=>x.id===p.id)+1;
+  const no='BL-'+String(DB.students.findIndex(x=>x.id===s.id)+1).padStart(2,'0')+'-'+String(idx||1).padStart(2,'0');
   const st=DB.settings;
-  const qr=qrImgURL(remain>0?remain:fee,'HP T'+(+mm)+' '+s.name);
-  const today=fmtD(todayStr()).replace(/\//g,'.');
-  const paidFull=fee>0&&paid>=fee;
-  const words=moneyToWordsVN(fee);
+  const qr=qrImgURL(amount,'HP '+s.name);
+  const dstamp=fmtD(p.paidAt||todayStr()).replace(/\//g,'.');
+  const words=moneyToWordsVN(amount);
+  const note=(p.note||'').trim();
   let h='<div class="slipwrap">';
   h+='<div class="slip-scal"></div>';
   h+='<div class="slip"><div class="slip-grain"></div><div class="slip-fold"></div>';
@@ -2252,37 +2353,35 @@ function slipCardHTML(s,m){
     +'<div class="slip-pm"><svg width="104" height="104" viewBox="0 0 110 110">'
       +'<circle cx="55" cy="55" r="52" fill="none" stroke="#93392C" stroke-width="1.5" stroke-dasharray="3.5 4"/>'
       +'<circle cx="55" cy="55" r="37" fill="none" stroke="#93392C" stroke-width="1"/>'
-      +'<path id="pmRecArc'+s.id+'" d="M 55 11 A 44 44 0 1 1 54.96 11" fill="none"/>'
-      +'<text font-family="Be Vietnam Pro" font-size="9.5" font-weight="600" letter-spacing="2" fill="#93392C"><textPath href="#pmRecArc'+s.id+'" textLength="275" lengthAdjust="spacing">'+today+' · TEDU · ĐÃ NHẬN ·</textPath></text>'
+      +'<path id="pmRecArc'+p.id+'" d="M 55 11 A 44 44 0 1 1 54.96 11" fill="none"/>'
+      +'<text font-family="Be Vietnam Pro" font-size="9.5" font-weight="600" letter-spacing="2" fill="#93392C"><textPath href="#pmRecArc'+p.id+'" textLength="275" lengthAdjust="spacing">'+dstamp+' · TEDU · ĐÃ NHẬN ·</textPath></text>'
       +'<text x="55" y="72" text-anchor="middle" font-family="Playfair Display" font-size="44" fill="#93392C">*</text>'
       +'</svg></div>'
     +'<div class="slip-brand">'+H((st.name||'TEdu').toUpperCase())+'</div>'
     +'<div class="slip-title">PHIẾU HỌC PHÍ</div>'
     +'<div class="slip-script">biên lai học phí</div>'
-    +'<div><span class="slip-chip" style="color:'+C+';background:'+C+'14">Tháng '+(+mm)+' · '+yy+(cls.length?' — '+H(cls[0].name):(s.subject?' — '+H(s.subject):''))+'</span></div>'
+    +'<div><span class="slip-chip" style="color:'+C+';background:'+C+'14">'+n+' buổi'+(sess.length?' · '+rangeLabel(sess):'')+(cls.length?' — '+H(cls[0].name):(s.subject?' — '+H(s.subject):''))+'</span></div>'
     +'</div>';
   h+='<div class="slip-fleu">'+SLIP_FLEURON+'</div>';
   h+='<div class="slip-rows">'
     +'<div class="slip-row"><span class="k">Học sinh</span><span class="dots"></span><span class="v" style="font-size:14px">'+H(s.name)+'</span></div>'
     +(s.grade?'<div class="slip-row"><span class="k">Lớp</span><span class="dots"></span><span class="v" style="font-weight:600;font-size:13px">'+H(s.grade)+'</span></div>':'')
-    +'<div class="slip-row"><span class="k">Học phí mỗi buổi</span><span class="dots"></span><span class="v" style="font-weight:600;font-size:13px">'+fmtM(s.rate)+'</span></div>'
-    +'<div class="slip-row"><span class="k">Số buổi đã học</span><span class="dots"></span><span class="v" style="font-weight:600;font-size:13px">'+n+' buổi</span></div>'
-    +(paid>0&&!paidFull?'<div class="slip-row"><span class="k">Đã thanh toán</span><span class="dots"></span><span class="v" style="color:#2F5D50;font-size:13px">'+fmtM(paid)+'</span></div>'
-      +'<div class="slip-row"><span class="k">Còn lại</span><span class="dots"></span><span class="v" style="color:#93392C;font-size:13px">'+fmtM(remain)+'</span></div>':'')
+    +'<div class="slip-row"><span class="k">Học phí mỗi buổi</span><span class="dots"></span><span class="v" style="font-weight:600;font-size:13px">'+fmtM(p.rate||s.rate)+'</span></div>'
+    +'<div class="slip-row"><span class="k">Số buổi thanh toán</span><span class="dots"></span><span class="v" style="font-weight:600;font-size:13px">'+n+' buổi</span></div>'
+    +'<div class="slip-row"><span class="k">Ngày chốt</span><span class="dots"></span><span class="v" style="font-weight:600;font-size:13px">'+fmtD(p.paidAt||todayStr())+'</span></div>'
     +'</div>';
   h+='<div class="slip-total">'
-    +'<div class="slip-tl">TỔNG HỌC PHÍ</div>'
-    +'<div class="slip-tv">'+(Math.round(fee)).toLocaleString('vi-VN')+'&#8239;<small>₫</small></div>'
+    +'<div class="slip-tl">TỔNG THANH TOÁN</div>'
+    +'<div class="slip-tv">'+(Math.round(amount)).toLocaleString('vi-VN')+'&#8239;<small>₫</small></div>'
     +(words?'<div class="slip-words">— '+H(words)+' —</div>':'')
-    +(paidFull?'<div class="slip-stampwrap"><span class="slip-stamp">ĐÃ THU ĐỦ</span></div>':'')
+    +'<div class="slip-stampwrap"><span class="slip-stamp">ĐÃ THU ĐỦ</span></div>'
     +'</div>';
-  if(billDates.length){
-    h+='<div class="slip-sec">NGÀY ĐI HỌC</div><div class="slip-days">'
-      +billDates.map(a=>'<span class="slip-day" style="color:'+C+';background:'+C+'0d">'+fmtDShort(a.date)+'</span>').join('')+'</div>';
-    if(absents.length)h+='<div class="slip-abs">Vắng: '+absents.map(a=>fmtDShort(a.date)+' ('+(a.status==='excused'?'có phép':'không phép')+')').join(', ')+'</div>';
+  if(sess.length){
+    h+='<div class="slip-sec">CÁC BUỔI TRONG PHIẾU NÀY</div><div class="slip-days">'
+      +sess.map(a=>'<span class="slip-day" style="color:'+C+';background:'+C+'0d">'+fmtDShort(a.date)+'</span>').join('')+'</div>';
   }
   if(note)h+='<div class="slip-sec">NHẬN XÉT</div><div class="slip-note"><div>'+H(note)+'</div></div>';
-  h+='<div class="slip-wish" style="text-align:center;font-family:\'Dancing Script\',cursive;font-weight:600;color:#6d6c5f;margin:15px 0;font-size:15px;line-height:1.5">Chúc em và gia đình một tháng thật nhiều niềm vui!</div>';
+  h+='<div class="slip-wish" style="text-align:center;font-family:\'Dancing Script\',cursive;font-weight:600;color:#6d6c5f;margin:15px 0;font-size:15px;line-height:1.5">Cảm ơn gia đình đã đồng hành cùng em!</div>';
   const bankLine=(st.bankId&&st.bankAcc)?('<div class="slip-bank">QUÉT ĐỂ THANH TOÁN<br>'+H(st.bankId.toUpperCase())+' '+H(st.bankAcc)+(st.bankHolder?' · '+H(st.bankHolder.toUpperCase()):'')+'</div>'):(st.bankInfo?'<div class="slip-bank">'+H(st.bankInfo)+'</div>':'');
   if(st.qrImage){
     h+='<div class="slip-qrwrap"><div class="slip-qrmat"><img src="'+st.qrImage+'" alt="QR"></div>'+bankLine+'</div>';
@@ -2292,28 +2391,35 @@ function slipCardHTML(s,m){
     h+='<div class="slip-qrwrap">'+bankLine+'</div>';
   }
   h+='<div class="slip-footer"><div class="slip-thanks"><span>Cảm ơn quý phụ huynh</span>'+SLIP_FLEURON+'<i>'+H(st.name||'TEdu')+'</i></div>'
-    +'<div class="slip-printed">IN NGÀY '+today+' · TIỆM QUẢN LÝ DẠY HỌC '+H((st.name||'TEDU').toUpperCase())+'</div></div>';
+    +'<div class="slip-printed">IN NGÀY '+fmtD(todayStr()).replace(/\//g,'.')+' · TIỆM QUẢN LÝ DẠY HỌC '+H((st.name||'TEDU').toUpperCase())+'</div></div>';
   h+='</div></div>';
   h+='<div class="slip-scal bot"></div></div>';
   return h;
 }
+/* Xem phiếu của lần chốt gần nhất (hoặc mở màn chốt nếu còn nợ) */
 function openFeeSlip(sid){
   const s=studentById(sid); if(!s)return;
-  const m=feeMonth||curMonth();
-  const note=DB.slipNotes[s.id+'|'+m]||'';
-  openModal(mHead('Phiếu học phí – '+H(s.name))
-    +'<label class="lb">Nhận xét in trên phiếu (tuỳ chọn)</label>'
-    +'<textarea class="inp" rows="2" placeholder="VD: Em học chăm, tiến bộ rõ phần hình học" oninput="slipNoteInput(\''+sid+'\',\''+m+'\',this.value)">'+H(note)+'</textarea>'
-    +'<div class="hint mb">'+(DB.settings.qrImage?'Phiếu đang dùng ảnh QR bạn đã tải lên (đổi trong Cài đặt).':(DB.settings.bankId&&DB.settings.bankAcc?'Mã VietQR tự điền số tiền còn lại (cần internet để hiện ảnh).':'Thêm số tài khoản hoặc tải ảnh QR trong <b>Cài đặt</b> để phiếu có mã QR.'))+'</div>'
-    +'<div id="slipPrev" class="mt">'+slipCardHTML(s,m)+'</div>'
-    +'<div class="m-foot"><button class="btn btn-ghost" onclick="closeModal()">Đóng</button>'
-    +'<button class="btn btn-pri" data-tip="Mở hộp in — chọn Lưu PDF để gửi Zalo" onclick="printSlip(\''+sid+'\')">'+ic('printer')+' In / Lưu PDF</button></div>',true);
+  const list=DB.payments.filter(p=>p.studentId===sid).sort((a,b)=>(b.paidAt||'').localeCompare(a.paidAt||''));
+  if(list.length)return openPaymentSlip(list[0].id);
+  if(unpaidSessionsOf(sid).length)return openSettle(sid);
+  toast('Chưa có lần chốt nào — phiếu sinh ra khi bạn Chốt & in ở trang Học phí');
 }
-function slipNoteInput(sid,m,v){
-  DB.slipNotes[sid+'|'+m]=v; save();
-  const s=studentById(sid);
+function openPaymentSlip(pid){
+  const p=DB.payments.find(x=>x.id===pid); if(!p)return;
+  const s=studentById(p.studentId); if(!s)return;
+  openModal(mHead('Phiếu học phí – '+H(s.name))
+    +'<div class="hint mb">Phiếu của lần chốt ngày '+fmtD(p.paidAt)+'. Sửa nhận xét sẽ in theo bản mới.</div>'
+    +'<label class="lb">Nhận xét in trên phiếu (tuỳ chọn)</label>'
+    +'<input class="inp" value="'+H(p.note||'')+'" oninput="payNoteInput(\''+pid+'\',this.value)">'
+    +'<div id="slipPrev" class="mt">'+slipCardHTMLPay(p)+'</div>'
+    +'<div class="m-foot"><button class="btn btn-ghost" onclick="closeModal()">Đóng</button>'
+    +'<button class="btn btn-pri" data-tip="Mở hộp in — chọn Lưu PDF để gửi Zalo" onclick="printPayment(\''+pid+'\')">'+ic('printer')+' In / Lưu PDF</button></div>',true);
+}
+function payNoteInput(pid,v){
+  const p=DB.payments.find(x=>x.id===pid); if(!p)return;
+  p.note=v; save();
   const el=document.getElementById('slipPrev');
-  if(el&&s)el.innerHTML=slipCardHTML(s,m);
+  if(el)el.innerHTML=slipCardHTMLPay(p);
 }
 function printSlips(inner){
   const w=window.open('','_blank');
@@ -2323,16 +2429,9 @@ function printSlips(inner){
     +inner+'<script>window.onload=function(){setTimeout(function(){window.print();},700);};<\/script></body></html>');
   w.document.close();
 }
-function printSlip(sid){
-  const s=studentById(sid); if(!s)return;
-  printSlips('<div class="pagebreak">'+slipCardHTML(s,feeMonth||curMonth())+'</div>');
-}
-function printAllSlips(){
-  const m=feeMonth||curMonth();
-  const rows=feeRows(m).filter(r=>r.n>0||r.paid>0);
-  if(!rows.length){toast('Chưa có học sinh nào có buổi học trong tháng này');return;}
-  printSlips(rows.map(r=>'<div class="pagebreak">'+slipCardHTML(r.s,m)+'</div>').join(''));
-  toast('Đang mở '+rows.length+' phiếu để in...');
+function printPayment(pid){
+  const p=DB.payments.find(x=>x.id===pid); if(!p)return;
+  printSlips('<div class="pagebreak">'+slipCardHTMLPay(p)+'</div>');
 }
 
 /* ========== HƯỚNG DẪN SỬ DỤNG ========== */
@@ -2402,12 +2501,12 @@ function renderGuide(){
     +'<div class="g-actions">'+A('Điểm danh hôm nay',"nav('att')")+'</div>'});
   // 6. HỌC PHÍ
   secs.push({t:'Học phí & phiếu thu',ic:'credit-card',body:
-    S(['Học phí tháng = <b>số buổi tính phí × đơn giá của từng em</b> — tự cộng từ điểm danh, không phải nhập tay.',
-       'Bấm <b>Thu</b> để ghi lần thu (đủ hoặc một phần, tiền mặt/chuyển khoản). Trạng thái tự đổi: <b>Đã thu đủ / Thu một phần / Chưa thu</b>.',
-       'Ba nút cuối mỗi hàng: <b>phiếu học phí</b> (in / lưu PDF), <b>chép tin nhắc phí</b> (dán vào Zalo là gửi), <b>lịch sử thu</b>.',
-       'Phiếu học phí kiểu biên lai cổ: ghi nhận xét, mã <b>QR tự điền số tiền</b> (VietQR từ số tài khoản trong Cài đặt, hoặc ảnh QR bạn tự tải lên), đóng <b>dấu ĐÃ THU ĐỦ</b> khi hoàn tất. Nút <b>In phiếu cả tháng</b> in mỗi em một trang.'])
-    +D('<div id="gdSlip" style="max-width:300px;margin:0 auto"><div class="slip-total" style="background:#F7F2E3"><div class="slip-tl">TỔNG HỌC PHÍ</div><div class="slip-tv">1.620.000&#8239;<small>₫</small></div><div class="slip-words">— Một triệu sáu trăm hai mươi nghìn đồng —</div><div class="slip-stampwrap"><span class="slip-stamp">ĐÃ THU ĐỦ</span></div></div></div><div class="right mt"><button class="btn btn-xs btn-ghost" onclick="gdSlipDemo()">Đóng dấu lại</button></div>','Trích một góc phiếu — tiền tự đổi thành chữ, dấu đỏ tự đóng khi em đó nộp đủ.')
-    +'<div class="g-actions">'+A('Mở Học phí',"nav('fees')")+A('Xem phiếu mẫu',"if(DB.students.length){feeMonth=curMonth();openFeeSlip(DB.students[0].id)}else toast('Chưa có học sinh')",'Mở phiếu thật của học sinh đầu tiên')+'</div>'});
+    S(['Mỗi buổi <b>Có mặt / Muộn</b> sau điểm danh trở thành một buổi <b>chưa thanh toán</b> — không còn khái niệm chốt theo tháng. Nợ vắt tháng (học từ cuối tháng 6 sang tháng 7) gom chung, chốt một lần.',
+       'Ở trang Học phí, bấm <b>Chốt & in phiếu</b> ở từng em: <b>tick các buổi</b> muốn thu (mặc định chọn hết) → <b>XÁC NHẬN & IN PHIẾU</b> — phiếu mở ra để in, các buổi đó lập tức được đánh dấu <b>đã thanh toán</b>.',
+       'Phiếu là biên lai vintage cho đúng lô buổi đã tick: danh sách ngày học, tổng tiền bằng số & bằng chữ, dấu <b>ĐÃ THU ĐỦ</b>, mã <b>QR</b> theo số tiền (VietQR từ Cài đặt hoặc ảnh QR bạn tải lên).',
+       'Mục <b>Lịch sử</b> của mỗi em lưu mọi lần chốt: <b>in lại phiếu</b> bất kỳ lúc nào, hoặc <b>huỷ lần chốt</b> — các buổi trong đó trở lại "chưa thanh toán".'])
+    +D('<div id="gdSlip" style="max-width:300px;margin:0 auto"><div class="slip-total" style="background:#F7F2E3"><div class="slip-tl">TỔNG THANH TOÁN</div><div class="slip-tv">1.620.000&#8239;<small>₫</small></div><div class="slip-words">— Một triệu sáu trăm hai mươi nghìn đồng —</div><div class="slip-stampwrap"><span class="slip-stamp">ĐÃ THU ĐỦ</span></div></div></div><div class="right mt"><button class="btn btn-xs btn-ghost" onclick="gdSlipDemo()">Đóng dấu lại</button></div>','Trích một góc phiếu — tiền tự đổi thành chữ, dấu đỏ đóng ngay khi chốt.')
+    +'<div class="g-actions">'+A('Mở Học phí',"nav('fees')")+A('Xem phiếu mẫu',"if(DB.payments.length){openPaymentSlip(DB.payments[DB.payments.length-1].id)}else toast('Chưa có lần chốt nào — hãy Chốt & in ở trang Học phí')",'Mở phiếu của lần chốt gần nhất')+'</div>'});
   // 7. ĐIỂM KT & GIÁO ÁN
   secs.push({t:'Điểm kiểm tra & Giáo án',ic:'bar-chart',body:
     S(['<b>+ Thêm điểm</b>: em nào, bài gì, mấy điểm, nhận xét. Chọn <b>một em</b> ở ô lọc để xem <b>biểu đồ tiến bộ</b> — rê chuột vào từng điểm để xem chi tiết.',
@@ -2564,7 +2663,7 @@ function clearAll(){
 function addDaysISO(n){return dstr(new Date(Date.now()+n*864e5));}
 function makeSampleData(){
   const d=fixup(null);
-  d.meta.sample=true;
+  d.meta.sample=true; d.meta.payMigrated=true;
   Object.assign(d.settings,{name:'TEdu',defaultRate:150000,
     bankInfo:'STK: 31410001234567 – BIDV – NGUYEN VAN A (nội dung: HP + tên HS)',
     bankId:'BIDV',bankAcc:'31410001234567',bankHolder:'NGUYEN VAN A'});
@@ -2612,31 +2711,36 @@ function makeSampleData(){
       if(records.length)d.attendance.push({id:uid()+i,date,classId:c.id,records});
     });
   }
-  // Học phí
-  const bill=(sid,m)=>{let n=0;d.attendance.forEach(r=>{if(!r.date.startsWith(m))return;const x=r.records.find(q=>q.studentId===sid);if(x&&(x.status==='present'||x.status==='late'))n++;});return n;};
-  const now=new Date();
-  const pm=dstr(new Date(now.getFullYear(),now.getMonth()-1,15)).slice(0,7),cm=curMonth();
-  const pm2=dstr(new Date(now.getFullYear(),now.getMonth()-2,15)).slice(0,7);
-  // 2 tháng trước: tất cả đã thu đủ
-  d.students.forEach((s,idx)=>{
-    const fee=bill(s.id,pm2)*s.rate;
-    if(fee>0)d.payments.push({id:uid()+'q'+idx,studentId:s.id,month:pm2,amount:fee,paidAt:addDaysISO(-38-(idx%5)),method:idx%2?'Tiền mặt':'Chuyển khoản',note:''});
-  });
-  // tháng trước: đa số đủ, Gia Bảo 50%, Đức Long 70%, Đức Huy chưa đóng
-  d.students.forEach((s,idx)=>{
-    const fee=bill(s.id,pm)*s.rate;
-    if(fee<=0)return;
-    if(s.id===s4.id)return;
-    let amount=fee;
-    if(s.id===s2.id)amount=Math.round(fee*0.5/1000)*1000;
-    if(s.id===s10.id)amount=Math.round(fee*0.7/1000)*1000;
-    d.payments.push({id:uid()+'p'+idx,studentId:s.id,month:pm,amount,paidAt:addDaysISO(-13+(idx%7)),method:idx%3?'Chuyển khoản':'Tiền mặt',note:s.id===s2.id?'PH xin đóng nốt sau':''});
-  });
-  // tháng này: 4 em đã đóng
-  d.payments.push({id:uid()+'ca',studentId:s1.id,month:cm,amount:bill(s1.id,cm)*s1.rate,paidAt:addDaysISO(-1),method:'Chuyển khoản',note:'mẹ chuyển sớm'});
-  d.payments.push({id:uid()+'cb',studentId:s3.id,month:cm,amount:300000,paidAt:addDaysISO(-2),method:'Tiền mặt',note:''});
-  d.payments.push({id:uid()+'cc',studentId:s7.id,month:cm,amount:bill(s7.id,cm)*s7.rate,paidAt:addDaysISO(-3),method:'Chuyển khoản',note:''});
-  d.payments.push({id:uid()+'cd',studentId:s9.id,month:cm,amount:bill(s9.id,cm)*s9.rate,paidAt:addDaysISO(-2),method:'Tiền mặt',note:'đóng sau buổi học'});
+  // Học phí — mô hình theo buổi: mỗi lần chốt gắn các buổi cụ thể.
+  // Thể hiện cả trường hợp nợ vắt tháng (buổi cuối tháng trước chưa chốt).
+  const billListOf=(sid)=>{
+    const out=[];
+    d.attendance.forEach(r=>{
+      const x=(r.records||[]).find(q=>q.studentId===sid);
+      if(x&&(x.status==='present'||x.status==='late'))out.push({key:r.date+'|'+r.classId,date:r.date});
+    });
+    return out.sort((a,b)=>a.date.localeCompare(b.date));
+  };
+  const claimedS={};
+  const settle=(s,uptoOffset,payOffset,method,note)=>{
+    const upto=addDaysISO(uptoOffset);
+    const cl=(claimedS[s.id]=claimedS[s.id]||new Set());
+    const keys=billListOf(s.id).filter(x=>x.date<=upto&&!cl.has(x.key)).map(x=>{cl.add(x.key);return x.key;});
+    if(!keys.length)return;
+    d.payments.push({id:uid()+Math.random().toString(36).slice(2,4),studentId:s.id,
+      sessionKeys:keys,sessions:keys.length,rate:+s.rate||0,amount:keys.length*(+s.rate||0),
+      paidAt:addDaysISO(payOffset),method:method,note:note||''});
+  };
+  // Đa số các em đã chốt sạch tới ~35 ngày trước
+  d.students.forEach((s,idx)=>settle(s,-36,-34+(idx%4),idx%2?'Tiền mặt':'Chuyển khoản',''));
+  // Minh Anh, Ngọc Diệp, Thu Hà: chốt tiếp gần đây → sạch nợ tới -3 ngày
+  settle(s1,-3,-1,'Chuyển khoản','mẹ chuyển sớm');
+  settle(s7,-4,-3,'Chuyển khoản','');
+  settle(s9,-3,-2,'Tiền mặt','đóng sau buổi học');
+  // Thu Trang: chốt cách đây 2 tuần → còn nợ các buổi sau đó (vắt từ cuối tháng trước sang tháng này)
+  settle(s3,-15,-13,'Tiền mặt','');
+  // Các em còn lại (Gia Bảo, Đức Huy, Khánh Linh, Khánh Vy, Đức Long, Tuấn Kiệt, Hoàng Nam...)
+  // giữ nguyên buổi từ ~35 ngày trước tới nay CHƯA chốt — thấy rõ nợ vắt tháng.
   // Điểm kiểm tra
   const sc=(s,off,title,score,note)=>d.scores.push({id:uid()+Math.random().toString(36).slice(2,4),studentId:s.id,date:addDaysISO(off),title,score,note:note||''});
   sc(s1,-64,'KT 15 phút',7.5);sc(s1,-45,'KT 1 tiết',8);sc(s1,-24,'Thi giữa kỳ',8.5,'tiến bộ phần hình học');sc(s1,-10,'Đề tự luyện số 5',9);sc(s1,-3,'KT 15 phút',9);
@@ -2661,8 +2765,9 @@ function makeSampleData(){
   les(-9,c1.id,'Đường tròn – góc nội tiếp','- Định lý góc nội tiếp và hệ quả\n- Chữa bài hình đề giữa kỳ\n- Ngọc Diệp vẽ hình chuẩn, cả nhóm cần luyện thêm câu c','Đề hình số 7, câu 1–3 (vẽ hình ra nháp trước).');
   les(-23,c6.id,'Tổng kết khoá hè Toán 8','- Chữa KT cuối khoá\n- Tổng kết: Long tiến bộ rõ chương đa thức, Nam vững hằng đẳng thức\n- Dặn dò lộ trình vào năm học','Ôn lại 5 hằng đẳng thức, chuẩn bị vào chương trình 9.');
   // Ghi chú phiếu
-  d.slipNotes[s1.id+'|'+cm]='Em học chăm, tiến bộ rõ ở phần hình học. Cảm ơn gia đình đã đồng hành!';
-  d.slipNotes[s2.id+'|'+cm]='Em đã tự tin hơn với căn thức, cần duy trì làm đề mỗi tuần.';
+  // Nhận xét mẫu gắn vào lần chốt gần nhất của Minh Anh (mô hình theo buổi)
+  {const lastP=d.payments.filter(p=>p.studentId===s1.id).sort((a,b)=>(b.paidAt||'').localeCompare(a.paidAt||''))[0];
+   if(lastP)lastP.note='Em học chăm, tiến bộ rõ ở phần hình học. Cảm ơn gia đình đã đồng hành!';}
   return d;
 }
 function purgeAllDocs(){try{(DB.docs||[]).forEach(function(dc){idbDel(dc.id);});}catch(e){}}
@@ -3020,7 +3125,7 @@ const AI_ACT_META={
  edit_class:{label:'Sửa ca học',icon:'pencil'},
  delete_class:{label:'Xoá ca học',icon:'trash'},
  assign_students:{label:'Gán học sinh vào ca',icon:'users'},
- record_payment:{label:'Ghi nhận thu học phí',icon:'credit-card'},
+ settle_student:{label:'Chốt & in phiếu học phí',icon:'credit-card'},
  add_score:{label:'Thêm điểm kiểm tra',icon:'bar-chart'},
  add_lesson:{label:'Thêm giáo án',icon:'book'},
  take_attendance:{label:'Mở điểm danh',icon:'check-circle'},
@@ -3155,7 +3260,7 @@ function aiCardRows(a){
     case 'edit_class':add('class',cName(a.classId));Object.keys(a.set||{}).forEach(function(k){var v=a.set[k];add(k,k==='days'?(v||[]).map(aiDayName).join(', '):H(String(v)));});break;
     case 'delete_class':add('class',cName(a.classId));R.push('<div class="ai-warn">'+ic('alert',12)+' Lịch sử điểm danh của ca vẫn được giữ để tính học phí.</div>');break;
     case 'assign_students':add('class',cName(a.classId));add('students',(a.studentIds||[]).map(sName).join(', '));break;
-    case 'record_payment':add('student',sName(a.studentId));add('amount','<b>'+fmtM(+a.amount)+'</b>');add('month',H(a.month||curMonth()));add('method',H(a.method||'Chuyển khoản'));add('note',H(a.note));break;
+    case 'settle_student':{const un=unpaidSessionsOf(a.studentId);add('student',sName(a.studentId));add('Số buổi',un.length+' buổi ('+rangeLabel(un)+')');add('amount','<b>'+fmtM(unpaidAmount(a.studentId))+'</b>');break;}
     case 'add_score':add('student',sName(a.studentId));add('title',H(a.title||'Kiểm tra'));add('score','<b>'+H(String(a.score))+'</b>');add('date',fmtD(a.date||todayStr()));add('note',H(a.note));break;
     case 'add_lesson':add('title',H(a.title));if(a.classId)add('class',cName(a.classId));add('date',fmtD(a.date||todayStr()));add('content',H(String(a.content||'').slice(0,120)));add('homework',H(a.homework));break;
   }
@@ -3219,11 +3324,15 @@ function aiExec(a){
      c.studentIds=c.studentIds||[];let n=0;
      (a.studentIds||[]).forEach(function(id){if(studentById(id)&&c.studentIds.indexOf(id)<0){c.studentIds.push(id);n++;}});
      save();return{ok:true,msg:'Đã gán '+n+' học sinh vào '+c.name,page:'classes'};}
-   case 'record_payment':{
+   case 'settle_student':{
      const s=studentById(a.studentId);if(!s)return{ok:false,msg:'Không tìm thấy học sinh'};
-     const amt=+a.amount;if(!amt||amt<=0)return{ok:false,msg:'Số tiền không hợp lệ'};
-     DB.payments.push({id:uid(),studentId:s.id,month:a.month||curMonth(),amount:amt,paidAt:todayStr(),method:a.method||'Chuyển khoản',note:a.note||''});
-     save();return{ok:true,msg:'Đã ghi nhận '+fmtM(amt)+' — '+s.name,page:'fees'};}
+     const list=unpaidSessionsOf(s.id);
+     if(!list.length)return{ok:false,msg:'Không còn buổi chưa thanh toán'};
+     const p={id:uid(),studentId:s.id,sessionKeys:list.map(x=>x.key),sessions:list.length,rate:+s.rate||0,
+       amount:list.length*(+s.rate||0),paidAt:todayStr(),method:'Chuyển khoản',note:''};
+     DB.payments.push(p);save();
+     printPayment(p.id);
+     return{ok:true,msg:'Đã chốt '+list.length+' buổi — '+fmtM(p.amount)+' ('+s.name+')',page:'fees'};}
    case 'add_score':{
      const s=studentById(a.studentId);if(!s)return{ok:false,msg:'Không tìm thấy học sinh'};
      const sc=+a.score;if(isNaN(sc)||sc<0||sc>10)return{ok:false,msg:'Điểm phải từ 0 đến 10'};
@@ -3324,8 +3433,8 @@ function aiLocalParse(text){
   /* truy vấn nhanh */
   if(/(hom nay|bua nay).*(day|hoc|co ca|lich)|^lich hom nay|^hom nay day gi/.test(nt))return aiQToday(todayStr());
   if(/(ngay mai|^mai\b).*(day|hoc|co ca|lich)|^lich (ngay )?mai/.test(nt))return aiQToday(dAdd(todayStr(),1));
-  if(/(ai|em nao|nhung ai|ban nao).*(chua (dong|nop|thu)|con (no|thieu))|chua thu du|chua dong tien/.test(nt))return aiQUnpaid(curMonth());
-  if(/(tong|doanh) thu|thu duoc bao nhieu|hoc phi thang nay|tong hoc phi/.test(nt))return aiQMonth(curMonth());
+  if(/(ai|em nao|nhung ai|ban nao).*(chua (dong|nop|thu)|con (no|thieu))|chua thu du|chua dong tien/.test(nt))return aiQUnpaid();
+  if(/(tong|doanh) thu|thu duoc bao nhieu|hoc phi thang nay|tong hoc phi/.test(nt))return aiQMoney();
   if(/bao nhieu hoc sinh|may hoc sinh|si so|co bao nhieu em|tong so hoc sinh/.test(nt))return aiQCount();
   /* điều hướng */
   let m=/^(?:mo|chuyen|vao|di den)\s+(?:trang\s+)?(.+)$/.exec(nt);
@@ -3420,12 +3529,12 @@ function aiLocalParse(text){
     return{html:html,actions:[{type:'assign_students',classId:cs[0].id,studentIds:ids}]};
   }
   /* thu tiền */
-  m=/^(?:thu|ghi nhan thu|nop)\s+(?:tien|hoc phi)?\s*(?:cua\s+)?(.+?)\s+([\d.,]+\s*(?:k|nghin|ngan|tr|trieu|d|dong)?)\s*(?:thang\s+(\d{1,2}))?$/.exec(nt);
-  if(m){
+  m=/^(?:thu|chot|ghi nhan thu|nop)\s+(?:tien|hoc phi|phieu)?\s*(?:cua\s+)?(.+?)(?:\s+[\d.,]+\s*(?:k|nghin|ngan|tr|trieu|d|dong)?)?\s*$/.exec(nt);
+  if(m&&/^(thu|chot|ghi nhan thu|nop)\b/.test(nt)){
     const ss=aiFindStudents(m[1]);if(!ss.length)return{html:'Không tìm thấy học sinh "'+H(m[1])+'".',actions:[]};if(ss.length>1)return aiAmbig(ss,'s');
-    const amt=aiMoneyIn(m[2]);if(!amt)return{html:'Tôi chưa đọc được số tiền.',actions:[]};
-    const month=m[3]?todayStr().slice(0,4)+'-'+pad(+m[3]):curMonth();
-    return{html:'Xác nhận:',actions:[{type:'record_payment',studentId:ss[0].id,amount:amt,month:month}]};
+    const un=unpaidSessionsOf(ss[0].id);
+    if(!un.length)return{html:'<b>'+H(ss[0].name)+'</b> không còn buổi nào chưa thanh toán ✓',actions:[]};
+    return{html:'Xác nhận — chốt sẽ in phiếu và đánh dấu các buổi đã thanh toán:',actions:[{type:'settle_student',studentId:ss[0].id}]};
   }
   /* thêm điểm */
   m=/^(?:cho|them diem|nhap diem)\s+(.+?)\s+(\d{1,2}(?:[.,]\d)?)\s*diem(?:\s+(?:bai|mon)?\s*(.*))?$/.exec(nt)||/^(?:them|nhap)\s+diem\s+(.+?)\s+(\d{1,2}(?:[.,]\d)?)(?:\s+(?:bai)?\s*(.*))?$/.exec(nt);
@@ -3453,19 +3562,20 @@ function aiQToday(date){
   }).join('');
   return{html:'Lịch ngày <b>'+fmtD(date)+'</b>:'+rows,actions:[]};
 }
-function aiQUnpaid(month){
-  const rows=[];let total=0;
+function aiQUnpaid(){
+  const rows=[];let total=0,sessTotal=0;
   DB.students.forEach(function(s){
-    const fee=monthFee(s.id,month),paid=monthPaid(s.id,month);
-    if(fee>paid){total+=fee-paid;rows.push(aiRow(s.name,'<b class="ai-red">'+fmtM(fee-paid)+'</b> <button class="btn btn-xs btn-ghost" onclick="nav(\'fees\')">Thu</button>'));}
+    const un=unpaidSessionsOf(s.id);
+    if(un.length){const amt=un.length*(+s.rate||0);total+=amt;sessTotal+=un.length;
+      rows.push(aiRow(s.name+' · '+un.length+' buổi','<b class="ai-red">'+fmtM(amt)+'</b> <button class="btn btn-xs btn-ghost" onclick="openSettle(\''+s.id+'\')">Chốt</button>'));}
   });
-  if(!rows.length)return{html:'Tháng này <b>đã thu đủ của tất cả học sinh</b>. Tuyệt vời! ✓',actions:[]};
-  return{html:'Còn <b>'+rows.length+'</b> em chưa đóng đủ (tổng <b class="ai-red">'+fmtM(total)+'</b>):'+rows.join(''),actions:[]};
+  if(!rows.length)return{html:'<b>Không còn buổi nào chưa thanh toán</b>. Tuyệt vời! ✓',actions:[]};
+  return{html:'Còn <b>'+sessTotal+'</b> buổi chưa thanh toán của '+rows.length+' em (tổng <b class="ai-red">'+fmtM(total)+'</b>):'+rows.join(''),actions:[]};
 }
-function aiQMonth(month){
-  let fee=0,paid=0,sess=0;
-  DB.students.forEach(function(s){fee+=monthFee(s.id,month);paid+=monthPaid(s.id,month);sess+=countBillable(s.id,month);});
-  return{html:'Tháng <b>'+month.slice(5)+'/'+month.slice(0,4)+'</b>: '+aiRow('Buổi tính phí',String(sess))+aiRow('Học phí dự kiến',fmtM(fee))+aiRow('Đã thu','<b class="ai-grn">'+fmtM(paid)+'</b>')+aiRow('Còn lại','<b class="ai-red">'+fmtM(fee-paid)+'</b>'),actions:[]};
+function aiQMoney(){
+  let owed=0,sess=0;
+  DB.students.forEach(function(s){const un=unpaidSessionsOf(s.id);sess+=un.length;owed+=un.length*(+s.rate||0);});
+  return{html:aiRow('Buổi chờ thanh toán',String(sess))+aiRow('Tiền chờ thu','<b class="ai-red">'+fmtM(owed)+'</b>')+aiRow('Đã thu 30 ngày','<b class="ai-grn">'+fmtM(paidRecently(30))+'</b>'),actions:[]};
 }
 function aiQCount(){
   const act=DB.students.filter(function(s){return s.status==='active';}).length;
@@ -3474,13 +3584,13 @@ function aiQCount(){
 }
 function aiQStudent(s){
   const month=curMonth();
-  const fee=monthFee(s.id,month),paid=monthPaid(s.id,month),ses=countBillable(s.id,month);
+  const un=unpaidSessionsOf(s.id),owed=un.length*(+s.rate||0);
   const cls=classesOfStudent(s.id).map(function(c){return c.name;}).join(', ')||'—';
   const sc=DB.scores.filter(function(x){return x.studentId===s.id;}).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,3);
   return{html:'<b>'+H(s.name)+'</b> · '+H(s.grade||'')+' <span class="bd '+(s.status==='active'?'bd-grn':s.status==='paused'?'bd-amb':'bd-gray')+'">'+aiStatusVN(s.status)+'</span>'
    +aiRow('Môn / đơn giá',H(s.subject||'—')+' · '+fmtM(s.rate))
    +aiRow('Ca học',H(cls))
-   +aiRow('Tháng này',ses+' buổi · '+fmtM(fee)+' · đã thu '+fmtM(paid))
+   +aiRow('Chưa thanh toán',un.length?un.length+' buổi · <b class="ai-red">'+fmtM(owed)+'</b>':'0 buổi ✓')
    +(sc.length?aiRow('Điểm gần đây',sc.map(function(x){return H(x.title)+': <b>'+x.score+'</b>';}).join(' · ')):'')
    +'<div class="mt"><button class="btn btn-xs btn-ghost" onclick="openProfile(\''+s.id+'\')">Hồ sơ đầy đủ</button></div>',actions:[]};
 }
@@ -3492,7 +3602,7 @@ function aiCtx(){
     settings:{defaultRate:DB.settings.defaultRate,chargeUnexcused:DB.settings.chargeUnexcused},
     students:DB.students.map(function(s){return{id:s.id,name:s.name,grade:s.grade,subject:s.subject,rate:s.rate,status:s.status,parent:s.parentName};}),
     classes:DB.classes.map(function(c){return{id:c.id,name:c.name,days:c.days,start:c.start,end:c.end,from:c.startDate,to:c.endDate,students:(c.studentIds||[]).map(function(id){var s=studentById(id);return s?s.name:null;}).filter(Boolean)};}),
-    feesThisMonth:DB.students.map(function(s){return{name:s.name,sessions:countBillable(s.id,month),fee:monthFee(s.id,month),paid:monthPaid(s.id,month)};})
+    unpaid:DB.students.map(function(s){var un=unpaidSessionsOf(s.id);return{id:s.id,name:s.name,unpaidSessions:un.length,unpaidAmount:un.length*(+s.rate||0)};})
   });
 }
 function aiSysPrompt(){
@@ -3508,7 +3618,7 @@ function aiSysPrompt(){
   +'edit_class{classId,set:{name?,subject?,days?,start?,end?,startDate?,endDate?}}\n'
   +'delete_class{classId}\n'
   +'assign_students{classId,studentIds:[]}\n'
-  +'record_payment{studentId,amount:int VND,month:"YYYY-MM",method?,note?}\n'
+  +'settle_student{studentId} — chốt TẤT CẢ buổi chưa thanh toán của học sinh đó, in phiếu, đánh dấu đã thanh toán\n'
   +'add_score{studentId,title,score:0..10,date?,note?}\n'
   +'add_lesson{title,classId?,content?,homework?,date?}\n'
   +'take_attendance{classId,date:"YYYY-MM-DD"}\n'
@@ -3565,6 +3675,38 @@ async function aiTestKey(btn){
 /* ========== ĐA NGÔN NGỮ (VI / EN / KO) ========== */
 let LANG='vi'; try{LANG=localStorage.getItem('tedu_lang')||'vi';}catch(e){}
 const I18N={
+"Tick buổi đã dạy → xác nhận → in phiếu — buổi được đánh dấu đã thanh toán":["Tick taught sessions → confirm → print the receipt — sessions get marked paid","수업 선택 → 확인 → 영수증 인쇄 — 해당 수업은 결제 완료 처리"],
+"Buổi chờ thanh toán":["Sessions awaiting payment","미결제 수업"],
+"Tiền chờ thu":["Amount awaiting","수금 대기 금액"],
+"mọi buổi chưa chốt":["all unsettled sessions","미정산 수업 전체"],
+"Đã thu 30 ngày":["Collected (30 days)","최근 30일 수금"],
+"gần nhất":["most recent","최근"],
+"Khoảng ngày":["Date range","기간"],
+"Chốt & in phiếu":["Settle & print","정산·인쇄"],
+"Tick buổi → xác nhận → in phiếu":["Tick sessions → confirm → print","수업 선택 → 확인 → 인쇄"],
+"Các lần chốt trước: in lại / huỷ":["Past settlements: reprint / undo","지난 정산: 재인쇄/취소"],
+"Không còn buổi nào chờ thanh toán.":["No sessions awaiting payment.","미결제 수업이 없습니다."],
+"Buổi mới xuất hiện ở đây ngay sau khi bạn điểm danh.":["New sessions appear here right after you take attendance.","출석 체크 후 바로 여기에 표시됩니다."],
+"Đã thanh toán hết":["All paid up","모두 결제됨"],
+"Xem các lần chốt":["See settlements","정산 내역 보기"],
+"Chờ thanh toán":["Awaiting payment","결제 대기"],
+"Chốt":["Settle","정산"],
+"Chọn tất cả":["Select all","전체 선택"],
+"Hình thức":["Method","방식"],
+"Ngày chốt":["Settle date","정산일"],
+"Tổng lần này":["This settlement","이번 정산 합계"],
+"XÁC NHẬN & IN PHIẾU":["CONFIRM & PRINT","확인 후 인쇄"],
+"Tạo phiếu, mở hộp in, đánh dấu các buổi đã thanh toán":["Creates the receipt, opens print, marks sessions paid","영수증 생성·인쇄·결제 처리"],
+"Chọn ít nhất 1 buổi":["Pick at least one session","최소 1개 수업 선택"],
+"Em này không còn buổi chưa thanh toán":["No unpaid sessions for this student","미결제 수업이 없습니다"],
+"In lại phiếu của lần chốt này":["Reprint this settlement's receipt","이 정산 영수증 재인쇄"],
+"Huỷ lần chốt — các buổi trở lại chưa thanh toán":["Undo settlement — sessions return to unpaid","정산 취소 — 수업이 미결제로 복귀"],
+"Đã huỷ lần chốt":["Settlement undone","정산 취소됨"],
+"Số buổi":["Sessions","수업 수"],
+"Chưa thanh toán":["Unpaid","미결제"],
+"Chốt gần nhất":["Last settlement","최근 정산"],
+"Chốt & in phiếu học phí":["Settle & print tuition receipt","수업료 정산·인쇄"],
+"Còn ":["Still owes ","남은: "],
 "Chào bạn! Tôi là thư ký của tiệm. Tôi làm được:":["Hello! I'm the shop's clerk. I can:","안녕하세요! 저는 이 상점의 서기입니다. 할 수 있는 일:"],
 "Thêm / sửa / xoá":["Add / edit / delete","추가 / 수정 / 삭제"],
 "học sinh, ca học —":["students and classes —","학생·수업 —"],
@@ -4181,6 +4323,14 @@ const I18N_RX=[
 [/^(\d+) học sinh · (\d+) buổi · (.+)$/,"$1 students · $2 sessions · $3","학생 $1 · 수업 $2 · $3"],
 [/^(.+) · (\d{2}\/\d{2}\/\d{4})$/,"$1 · $2","$1 · $2"],
 [/^(.+) · nay$/,"$1 · today","$1 · 오늘"],
+[/^Chốt học phí – (.+)$/,"Settle tuition – $1","수업료 정산 – $1"],
+[/^Đã chốt (\d+) buổi — (.+)$/,"Settled $1 sessions — $2","$1회 정산 — $2"],
+[/^Huỷ lần chốt này\? (\d+) buổi sẽ trở lại "chưa thanh toán"\.$/,"Undo this settlement? $1 sessions return to unpaid.","이 정산을 취소할까요? $1개 수업이 미결제로 돌아갑니다."],
+[/^(\d+) buổi · (.+)$/,"$1 sessions · $2","$1회 · $2"],
+[/^(\d+) buổi × (.+) = (.+)$/,"$1 × $2 = $3","$1회 × $2 = $3"],
+[/^Còn (\d+) buổi$/,"Owes $1 sessions","$1회 미결제"],
+[/^(\d+) học sinh$/,"$1 students","학생 $1명"],
+[/^(\d+) lần chốt$/,"$1 settlements","정산 $1건"],
 [/^· (.+)$/,"· $1","· $1"]
 ];
 const I18N_BLOCKS={
