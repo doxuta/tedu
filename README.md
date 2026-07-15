@@ -2,168 +2,169 @@
 
 # TEdu ✳
 
-### Tiệm quản lý dạy học · dành cho gia sư tận tâm
+### The teaching ledger shop · for devoted tutors
 
-*Sổ quản lý toàn diện cho gia sư / giáo viên dạy một mình — học sinh, lớp, thời khoá biểu, điểm danh, học phí, phiếu thu, điểm kiểm tra, giáo án, thư viện tài liệu — gói gọn trong **một file HTML duy nhất**, khoác giao diện tiệm văn phòng phẩm Sài Gòn thập niên 60.*
+*A complete management ledger for a solo tutor / teacher — students, classes, timetable, attendance, tuition, printable receipts, test scores, lesson journals, a document library and an AI assistant — all packed into **a single HTML file**, dressed as a 1960s Saigon stationery shop.*
 
-**🌐 Dùng thử ngay: [tedu-app.netlify.app](https://tedu-app.netlify.app)** — bấm **"Xem thử bản demo"**, không cần tài khoản.
+**🌐 Try it now: [tedu-app.netlify.app](https://tedu-app.netlify.app)** — click **"Xem thử bản demo"** (Try the demo), no account needed.
 
-![Ngôn ngữ](https://img.shields.io/badge/ng%C3%B4n%20ng%E1%BB%AF-VI%20%C2%B7%20EN%20%C2%B7%20KO-93392C)
-![Một file](https://img.shields.io/badge/to%C3%A0n%20b%E1%BB%99%20app-1%20file%20HTML-B08D3F)
-![Không build](https://img.shields.io/badge/build-kh%C3%B4ng%20c%E1%BA%A7n-2F5D50)
-![Firebase](https://img.shields.io/badge/%C4%91%E1%BB%93ng%20b%E1%BB%99-Firebase%20(t%C3%B9y%20ch%E1%BB%8Dn)-33506B)
-![Giấy phép](https://img.shields.io/badge/gi%E1%BA%A5y%20ph%C3%A9p-MIT-2B2318)
+![Languages](https://img.shields.io/badge/languages-VI%20%C2%B7%20EN%20%C2%B7%20KO-93392C)
+![Single file](https://img.shields.io/badge/entire%20app-1%20HTML%20file-B08D3F)
+![No build](https://img.shields.io/badge/build%20step-none-2F5D50)
+![Firebase](https://img.shields.io/badge/cloud%20sync-Firebase%20(optional)-33506B)
+![License](https://img.shields.io/badge/license-MIT-2B2318)
 
-<img src="docs/screenshots/01-landing.png" alt="Trang giới thiệu TEdu" width="850">
+<img src="docs/screenshots/01-landing.png" alt="TEdu landing page" width="850">
 
 </div>
 
 ---
 
-## Mục lục
+## Table of contents
 
-- [Vì sao có TEdu](#vì-sao-có-tedu)
-- [Tính năng](#tính-năng)
-- [Bộ sưu tập màn hình](#bộ-sưu-tập-màn-hình)
-- [Dùng ngay trong 30 giây](#dùng-ngay-trong-30-giây)
-- [Tự triển khai bản của riêng bạn](#tự-triển-khai-bản-của-riêng-bạn)
-- [Kiến trúc & công nghệ](#kiến-trúc--công-nghệ)
-- [Bảo mật & dữ liệu](#bảo-mật--dữ-liệu)
-- [Ngôn ngữ](#ngôn-ngữ)
-- [Giấy phép](#giấy-phép)
+- [Why TEdu exists](#why-tedu-exists)
+- [Features](#features)
+- [Screenshot gallery](#screenshot-gallery)
+- [Use it in 30 seconds](#use-it-in-30-seconds)
+- [Self-host your own copy](#self-host-your-own-copy)
+- [Architecture & tech](#architecture--tech)
+- [Security & data](#security--data)
+- [Languages](#languages)
+- [License](#license)
 
 ---
 
-## Vì sao có TEdu
+## Why TEdu exists
 
-Gia sư dạy một mình thường quản lý lớp bằng sổ tay + Zalo + Excel: điểm danh chỗ này, tính tiền chỗ kia, cuối tháng ngồi cộng tay từng buổi rồi soạn tin nhắn báo phụ huynh. TEdu gom toàn bộ quy trình đó về một trang web:
+A solo tutor usually runs their classes with a paper notebook + Zalo + Excel: attendance in one place, money in another, and at the end of the month they hand-count every session before texting each parent. TEdu folds that whole routine into one page:
 
-**Điểm danh xong là học phí tự cộng.** Mỗi buổi điểm danh được tính thẳng vào công nợ tháng của từng học sinh theo đơn giá mỗi buổi. Đến kỳ thu chỉ cần mở *Học phí*, mọi con số đã sẵn — kèm phiếu thu in được, mã VietQR tự điền số tiền, và tin nhắn soạn sẵn gửi phụ huynh.
+**Take attendance, and tuition adds itself up.** Every session you mark is billed straight into each student's monthly balance at their per-session rate. When collection day comes, open *Tuition* and every number is already there — with a printable receipt, a VietQR code pre-filled with the amount due, and ready-made parent messages.
 
-Toàn bộ ứng dụng nằm trong **một file `index.html`** — không cần cài đặt, không cần server, mở bằng trình duyệt là chạy. Kết nối Firebase (tuỳ chọn) để đăng nhập Google và đồng bộ đám mây nhiều thiết bị.
+The entire app lives in **one `index.html` file** — nothing to install, no server required; open it in a browser and it runs. Connect Firebase (optional) for Google sign-in and multi-device cloud sync.
 
-## Tính năng
+## Features
 
-### 👩‍🏫 Lớp học
-- **Học sinh** — hồ sơ đầy đủ (trường, lớp, môn, đơn giá/buổi, phụ huynh, SĐT); thêm/sửa/xoá từng em hoặc **thêm hàng loạt bằng bảng kiểu Excel** (dán trực tiếp từ Excel/Google Sheets, tab/enter di chuyển ô như spreadsheet).
-- **Ca học có nhiệm kỳ** — mỗi ca có ngày bắt đầu/kết thúc, lịch tuần, màu riêng; ca hết hạn tự chuyển vào **thống kê lớp đã kết thúc** kèm tình trạng thu học phí từng em.
-- **Sổ lớp** — nhật ký từng lớp đang dạy: danh sách học sinh, toàn bộ buổi đã dạy từ đầu, ai có mặt buổi nào, đã thu tiền hay chưa.
-- **Thời khoá biểu dạng lịch thật** — xem theo tuần hoặc cả tháng, có thứ/ngày/tháng, hôm nay được đóng khung, bấm vào ô là điểm danh.
-- **Điểm danh** — theo từng ca từng ngày: có mặt / vắng / muộn, ghi chú buổi học; sửa lại được các buổi cũ.
+### 👩‍🏫 Classroom
+- **Students** — full profiles (school, class, subject, per-session rate, parent, phone); add/edit/delete one by one or **bulk-add in an Excel-like grid** (paste straight from Excel/Google Sheets; Tab/Enter move between cells like a spreadsheet).
+- **Classes with terms** — each class has start/end dates, a weekly schedule and its own colour; expired classes move themselves into an **ended-class summary** with each student's payment status.
+- **Class book** — a journal per active class: enrolled students, every session taught since day one, who attended which session, and what's been collected.
+- **A real calendar timetable** — week or month view with actual dates, today framed, click any cell to open that session's attendance.
+- **Attendance** — per class per day: present / absent / late, session notes; past sessions can be reopened and edited.
 
-### 💰 Tài chính
-- **Học phí tự tính** theo số buổi thực học × đơn giá; theo dõi đã thu / còn thiếu từng em từng tháng, thanh tiến độ thu cả tháng.
-- **Phiếu học phí vintage** — biên lai kiểu thư tín xưa: số sê-ri, con dấu bưu điện ngày in, dòng kẻ chấm, số tiền bằng chữ viết tay, lưới ngày đi học như thẻ bấm lỗ, dấu son **"ĐÃ THU ĐỦ"** đóng xéo khi thu đủ. In từng phiếu hoặc **in cả tháng một lượt**.
-- **VietQR tự điền số tiền** còn thiếu, hoặc **tải ảnh QR của riêng bạn** lên dùng cố định.
-- **Tin nhắn phụ huynh soạn sẵn** — báo học phí, báo vắng, nhận xét — bấm là copy gửi Zalo/SMS.
+### 💰 Finance
+- **Self-calculating tuition** = sessions attended × rate; per-student, per-month tracking of collected vs. outstanding, plus a monthly progress bar.
+- **Vintage tuition receipts** — old-mail-style slips: serial number, dated postmark, dotted leader lines, the amount written out in words, an attendance grid like a punch card, and a red **"PAID IN FULL"** stamp slammed diagonally when settled. Print one receipt or **the whole month at once**.
+- **VietQR auto-filled** with the remaining amount, or **upload your own QR image** to use permanently.
+- **Ready-made parent messages** — tuition reminder, absence notice, progress report — one click to copy into Zalo/SMS.
 
-### 📚 Học tập
-- **Điểm kiểm tra** — lưu theo môn/loại bài, **biểu đồ tiến bộ có hover** xem chi tiết từng cột điểm, thang điểm tự co giãn.
-- **Giáo án & thư viện tài liệu** — soạn giáo án theo buổi; kho tài liệu nhận **mọi định dạng file** (PDF, Word, Excel, ảnh, âm thanh, video…), lưu ngay trong trình duyệt (IndexedDB), xem trước, tải về, gắn vào từng giáo án.
-- **Hướng dẫn A–Z trong app** — 10 chương có minh hoạ tương tác (demo điểm danh chạy được, lịch mẫu bấm được) ngay trong mục *Hướng dẫn*.
+### 📚 Learning
+- **Test scores** — logged by subject/test type, a **progress chart with hover details** for every data point, auto-scaling axis.
+- **Lessons & document library** — write up each session; the library accepts **every file format** (PDF, Word, Excel, images, audio, video…), stored right in the browser (IndexedDB), with previews, downloads, and attachments pinned to lessons.
+- **A-to-Z guide inside the app** — 10+ chapters with interactive illustrations (a working attendance demo, a clickable sample calendar) right in the *Guide* section.
 
-### 🤖 Trợ lý AI
-- **Ra lệnh bằng lời thường** — *"thêm học sinh Lan lớp 8A môn Văn giá 160k"*, *"thu Minh Anh 500k"*, *"điểm danh Toán 9 hôm nay"*, *"xoá ca Văn 9"* — trợ lý tự soạn lệnh ghi sổ.
-- **Luôn hỏi xác nhận trước khi ghi**: mỗi lệnh hiện thẻ tóm tắt kiểu biên lai (Thực hiện / Huỷ), không lo AI hiểu nhầm xoá bậy.
-- **Giải đáp từ số liệu thật**: "hôm nay dạy gì?", "ai chưa đóng tiền?", "tổng thu tháng này?", "xem hồ sơ Minh Anh" — trả lời ngay kèm nút thao tác nhanh.
-- **Hai chế độ**: bộ hiểu lệnh offline chạy sẵn không cần gì; dán **khoá Gemini miễn phí** (aistudio.google.com/app/apikey) vào Cài đặt là trò chuyện tự nhiên mọi kiểu nói, mọi ngôn ngữ.
+### 🤖 AI assistant
+- **Command it in plain words** — *"add student Lan, class 8A, Literature, 160k"*, *"collect Minh Anh 500k"*, *"attendance for Math 9 today"*, *"delete class Văn 9"* — the assistant drafts the ledger entry for you.
+- **Always confirms before writing**: every command produces a receipt-style summary card (Confirm / Cancel), so a misheard name never wrecks your ledger.
+- **Answers from your real data**: "what's on today?", "who hasn't paid?", "this month's total?", "show me Minh Anh" — instant answers with quick-action buttons.
+- **Two modes**: a built-in offline command parser that works with zero setup, and an optional **free Gemini API key** (aistudio.google.com/app/apikey) pasted into Settings for natural conversation in any phrasing, any language.
 
-### ☁️ Tài khoản & vận hành (khi bật Firebase)
-- **Đăng nhập Google** — lần đầu đăng nhập là tự tạo sổ; mỗi giáo viên một sổ dữ liệu riêng, đồng bộ tự động (đèn "Đã đồng bộ / Đang lưu" ở sidebar).
-- **Chế độ demo cho khách** — dữ liệu mẫu đầy đủ, nghịch thoải mái, không ghi gì lên mây, thoát là tự dọn.
-- **Trang Quản trị** — admin thấy toàn bộ tài khoản đã đăng ký (ngày tạo, hoạt động cuối, số học sinh), **khoá/mở khoá** tài khoản (chặn từ tầng máy chủ), bật **chế độ bảo trì**, **phát thông báo** đến mọi người dùng, thêm admin khác.
-- **Không có Firebase vẫn chạy** — để `TEDU_FIREBASE_CONFIG = null` là app hoạt động offline một máy, dữ liệu trong localStorage.
+### ☁️ Accounts & operations (with Firebase enabled)
+- **Google sign-in** — the first sign-in creates the account; every teacher gets an isolated ledger, synced automatically (a "Synced / Saving" light lives in the sidebar).
+- **Guest demo mode** — full sample data, click anything, nothing is written to the cloud, everything wipes itself on exit.
+- **Admin page** — admins see every registered account (created date, last active, student count), can **block/unblock** accounts (enforced at the server layer), switch on **maintenance mode**, **broadcast announcements** to every user's dashboard, and appoint other admins.
+- **Runs without Firebase too** — leave `TEDU_FIREBASE_CONFIG = null` and the app works offline on one device, with data in localStorage.
 
-### 🧰 Trải nghiệm
-- Ba ngôn ngữ **Tiếng Việt · English · 한국어**, đổi ngay không tải lại trang.
-- **Chống mất dữ liệu nhập dở**: lỡ bấm ra ngoài form đang gõ → hộp thoại *Tiếp tục / Lưu / Bỏ*.
-- **Mọi nút đều có tooltip** giải thích khi rê chuột.
-- Tối ưu **iPhone/Safari** (safe-area, thanh điều hướng dưới), in ấn, sao lưu/khôi phục toàn bộ dữ liệu ra file JSON (kèm cả tài liệu trong thư viện).
+### 🧰 Experience
+- Three languages — **Tiếng Việt · English · 한국어** — switched instantly, no reload.
+- **Unsaved-work protection**: click outside a half-filled form and you get a *Keep editing / Save / Discard* dialog.
+- **Every button has a tooltip** explaining what it does.
+- Optimised for **iPhone/Safari** (safe areas, bottom nav), printing, and full JSON backup/restore (document library included).
 
-## Bộ sưu tập màn hình
+## Screenshot gallery
 
-*(Ảnh chụp từ bản demo với dữ liệu mẫu.)*
+*(Captured from the demo with sample data.)*
 
 | | |
 |:---:|:---:|
-| **Bảng điều khiển** — số liệu tháng, ca hôm nay, ai chưa đóng đủ<br><img src="docs/screenshots/03-dashboard.png" width="420"> | **Học sinh** — sổ cái danh sách, tem trạng thái, thao tác nhanh<br><img src="docs/screenshots/04-students.png" width="420"> |
-| **Thêm hàng loạt kiểu Excel** — dán từ bảng tính, sửa như spreadsheet<br><img src="docs/screenshots/05-bulk-excel.png" width="420"> | **Sổ lớp** — nhật ký từng lớp: buổi dạy, chuyên cần, học phí<br><img src="docs/screenshots/06-so-lop.png" width="420"> |
-| **Thời khoá biểu** — lịch tháng thật, mỗi ca một màu<br><img src="docs/screenshots/07-tkb-month.png" width="420"> | **Điểm danh** — có mặt / vắng / muộn, ghi chú từng buổi<br><img src="docs/screenshots/08-attendance.png" width="420"> |
-| **Học phí** — tự cộng theo buổi, tiến độ thu, nút thu nhanh<br><img src="docs/screenshots/09-fees.png" width="420"> | **Phiếu học phí vintage** — dấu "ĐÃ THU ĐỦ", tiền bằng chữ, VietQR<br><img src="docs/screenshots/10-receipt.png" width="420"> |
-| **Thư viện tài liệu** — mọi định dạng, xem trước, gắn vào giáo án<br><img src="docs/screenshots/11-library.png" width="420"> | **Hướng dẫn trong app** — 10 chương, minh hoạ bấm được<br><img src="docs/screenshots/12-guide.png" width="420"> |
-| **Trợ lý AI** — ra lệnh bằng lời, thẻ xác nhận trước khi ghi<br><img src="docs/screenshots/14-ai.png" width="420"> | **Màn đăng nhập** — Google / demo / cổng quản trị<br><img src="docs/screenshots/02-login.png" width="420"> |
-| **Giao diện tiếng Anh** — đổi VI/EN/KO tức thì<br><img src="docs/screenshots/13-dashboard-en.png" width="420"> | |
+| **Dashboard** — monthly stats, today's classes, who still owes<br><img src="docs/screenshots/03-dashboard.png" width="420"> | **Students** — ledger-style list, stamp badges, quick actions<br><img src="docs/screenshots/04-students.png" width="420"> |
+| **Excel-like bulk add** — paste from a spreadsheet, edit like one<br><img src="docs/screenshots/05-bulk-excel.png" width="420"> | **Class book** — per-class journal: sessions, attendance, tuition<br><img src="docs/screenshots/06-so-lop.png" width="420"> |
+| **Timetable** — a real month calendar, one colour per class<br><img src="docs/screenshots/07-tkb-month.png" width="420"> | **Attendance** — present / absent / late, notes per session<br><img src="docs/screenshots/08-attendance.png" width="420"> |
+| **Tuition** — auto-summed per session, progress bar, quick collect<br><img src="docs/screenshots/09-fees.png" width="420"> | **Vintage receipt** — "PAID IN FULL" stamp, amount in words, VietQR<br><img src="docs/screenshots/10-receipt.png" width="420"> |
+| **Document library** — any format, previews, pinned to lessons<br><img src="docs/screenshots/11-library.png" width="420"> | **In-app guide** — 10+ chapters, clickable illustrations<br><img src="docs/screenshots/12-guide.png" width="420"> |
+| **AI assistant** — plain-word commands, confirm-before-write cards<br><img src="docs/screenshots/14-ai.png" width="420"> | **Sign-in screen** — Google / demo / admin gate<br><img src="docs/screenshots/02-login.png" width="420"> |
+| **English interface** — VI/EN/KO switched instantly<br><img src="docs/screenshots/13-dashboard-en.png" width="420"> | |
 
-## Dùng ngay trong 30 giây
+## Use it in 30 seconds
 
-1. Mở **[tedu-app.netlify.app](https://tedu-app.netlify.app)**.
-2. Bấm **"Xem thử bản demo"** — vào thẳng app với 12 học sinh, 6 lớp, điểm danh, học phí, tài liệu mẫu.
-3. Ưng ý thì quay lại màn đăng nhập, bấm **"Đăng nhập bằng Google"** — sổ riêng của bạn được tạo ngay, trống tinh, đồng bộ đám mây.
+1. Open **[tedu-app.netlify.app](https://tedu-app.netlify.app)**.
+2. Click **"Xem thử bản demo"** (Try the demo) — you land straight in the app with 12 students, 6 classes, attendance, tuition and sample documents.
+3. Like it? Go back to the sign-in screen and hit **"Sign in with Google"** — your own ledger is created instantly, empty and cloud-synced.
 
-Hoặc chạy hoàn toàn offline: tải file [`index.html`](index.html) về, mở bằng trình duyệt (file này gắn với Firebase của bản demo — muốn sổ offline riêng, sửa `window.TEDU_FIREBASE_CONFIG = null;` là xong).
+Or run it fully offline: download [`index.html`](index.html) and open it in a browser (the file points at the demo's Firebase — for a private offline ledger, change one line to `window.TEDU_FIREBASE_CONFIG = null;`).
 
-## Tự triển khai bản của riêng bạn
+## Self-host your own copy
 
-Bạn có thể dựng một bản TEdu độc lập (Firebase + hosting riêng, bạn làm admin) trong **~15 phút, miễn phí 100%**. Toàn bộ các bước — tạo project Firebase, bật Google Sign-In, tạo Firestore, **bộ security rules đầy đủ**, lấy config, đưa lên Netlify/Firebase Hosting, phong admin — được viết chi tiết trong:
+You can stand up an independent TEdu (your own Firebase + hosting, you as admin) in **~15 minutes, 100% free**. Every step — creating the Firebase project, enabling Google Sign-In, creating Firestore, the **complete security rules**, grabbing the config, deploying to Netlify/Firebase Hosting, appointing yourself admin — is written up in:
 
-📘 **[HUONG-DAN-TRIEN-KHAI.md](HUONG-DAN-TRIEN-KHAI.md)**
+📘 **[HUONG-DAN-TRIEN-KHAI.md](HUONG-DAN-TRIEN-KHAI.md)** *(step-by-step guide, in Vietnamese)*
 
-Tóm tắt:
+The short version:
 
 ```text
 1. console.firebase.google.com → Add project
-2. Authentication → bật Google
-3. Firestore → tạo DB → dán security rules (có sẵn trong hướng dẫn) → Publish
-4. Project settings → tạo Web app → copy firebaseConfig
-5. Dán config vào index.html (dòng window.TEDU_FIREBASE_CONFIG = ...)
-6. Kéo thả index.html lên app.netlify.com/drop → có link ngay
-7. Authentication → Authorized domains → thêm domain vừa nhận
-8. Firestore → collection `admins` → tạo doc id = email của bạn (viết thường)
+2. Authentication → enable Google
+3. Firestore → create DB → paste the security rules (included in the guide) → Publish
+4. Project settings → create a Web app → copy firebaseConfig
+5. Paste the config into index.html (the window.TEDU_FIREBASE_CONFIG = ... line)
+6. Drag index.html onto app.netlify.com/drop → instant URL
+7. Authentication → Authorized domains → add that domain
+8. Firestore → collection `admins` → create a doc whose ID is your email (lowercase)
 ```
 
-## Kiến trúc & công nghệ
+## Architecture & tech
 
 ```text
-index.html  (~270 KB, tất cả trong một file)
-├── CSS      thiết kế "tiệm văn phòng phẩm 1960": giấy ngả vàng, khung viền kép,
-│            con dấu bưu điện xoay, hoa văn fleuron, nút letterpress, bảng sổ cái
-├── HTML     landing page + app shell (sidebar, 12 trang, cổng đăng nhập)
-└── JS       vanilla JavaScript, không framework, không bundler
-    ├── Dữ liệu     localStorage (mỗi tài khoản một khoá riêng)
-    ├── Tài liệu    IndexedDB — file nhị phân lưu tại máy, không tốn phí mây
-    ├── Đồng bộ     Firebase Auth (Google) + Firestore, debounce 1.5s,
-    │               fallback offline khi config = null
-    ├── i18n        từ điển VI/EN/KO + MutationObserver dịch giao diện động
-    ├── Trợ lý AI   bộ hiểu lệnh tiếng Việt offline + Gemini API (khoá tuỳ chọn),
-    │               mọi lệnh ghi sổ đều qua thẻ xác nhận
-    └── In ấn       phiếu học phí render CSS thuần, mã VietQR (img.vietqr.io)
+index.html  (~340 KB, everything in one file)
+├── CSS      "1960s stationery shop" design system: aged paper, double-rule
+│            frames, rotating postmarks, fleurons, letterpress buttons, ledger tables
+├── HTML     landing page + app shell (sidebar, 13 pages, auth gate)
+└── JS       vanilla JavaScript — no framework, no bundler
+    ├── Data       localStorage (one key per account)
+    ├── Documents  IndexedDB — binary files stay on-device, zero cloud cost
+    ├── Sync       Firebase Auth (Google) + Firestore, 1.5s debounce,
+    │              graceful offline fallback when config = null
+    ├── i18n       VI/EN/KO dictionary + MutationObserver for dynamic UI
+    ├── AI         offline Vietnamese command parser + optional Gemini API,
+    │              every write gated behind a confirmation card
+    └── Printing   pure-CSS receipt rendering, VietQR (img.vietqr.io)
 ```
 
-- **Phông chữ:** Playfair Display · Be Vietnam Pro · Dancing Script (Google Fonts, đủ dấu tiếng Việt).
-- **Bảng màu:** giấy `#F1EAD8` · mực nâu đen `#2B2318` · đỏ gạch oxblood `#93392C` · xanh rêu `#2F5D50` · vàng đồng `#B08D3F` · nền espresso `#221B12`. Tuyệt đối không có màu tím 🙂.
-- **Không có bước build** — sửa file, lưu, tải lại trang là thấy thay đổi. Cập nhật bản deploy = kéo thả đè file mới lên Netlify; dữ liệu người dùng không ảnh hưởng vì nằm ở Firestore.
+- **Fonts:** Playfair Display · Be Vietnam Pro · Dancing Script (Google Fonts, full Vietnamese support).
+- **Palette:** paper `#F1EAD8` · sepia ink `#2B2318` · oxblood `#93392C` · deep green `#2F5D50` · aged gold `#B08D3F` · espresso `#221B12`. Absolutely no purple 🙂.
+- **No build step** — edit the file, save, reload. Updating the deployed app = drag the new file over the old one on Netlify; user data is untouched because it lives in Firestore.
 
-## Bảo mật & dữ liệu
+## Security & data
 
-- Khoá `apiKey` Firebase trong `index.html` là **định danh công khai theo thiết kế của Firebase**, không phải bí mật — quyền truy cập thực sự do **Firestore Security Rules** + **Authorized domains** quyết định (xem rules đầy đủ trong [hướng dẫn triển khai](HUONG-DAN-TRIEN-KHAI.md)).
-- Rules bảo đảm: mỗi giáo viên **chỉ đọc/ghi được sổ của chính mình**, và chỉ khi tài khoản còn `active`; người dùng **không thể tự đổi** trạng thái/quyền của mình; chỉ admin (doc trong collection `admins`) xem được danh sách tài khoản, khoá tài khoản, bật bảo trì, phát thông báo.
-- Tài khoản bị admin khoá là bị chặn từ tầng máy chủ (không đọc/ghi được gì), không phải chỉ ẩn nút trên giao diện.
-- File trong thư viện tài liệu nằm **trên máy người dùng** (IndexedDB), không đưa lên mây. Nên tải bản sao lưu JSON định kỳ trong *Cài đặt*.
+- The Firebase `apiKey` inside `index.html` is a **public identifier by Firebase's design**, not a secret — real access control comes from **Firestore Security Rules** + **Authorized domains** (the full ruleset ships in the [deployment guide](HUONG-DAN-TRIEN-KHAI.md)).
+- The rules guarantee: each teacher can **only read/write their own ledger**, and only while their account is `active`; users **cannot change their own** status/role; only admins (docs in the `admins` collection) can list accounts, block them, toggle maintenance, or broadcast announcements.
+- An admin-blocked account is stopped at the server layer (no reads, no writes) — not just hidden buttons.
+- Library files stay **on the user's device** (IndexedDB) and never upload. Regular JSON backups from *Settings* are recommended.
+- The optional Gemini key is stored inside your own ledger and used only for your requests.
 
-## Ngôn ngữ
+## Languages
 
-Nút chuyển **VI / EN / 한국어** đặt ở sidebar và góc landing page. Giao diện dịch tức thì kể cả nội dung sinh động (toast, modal, tooltip). Riêng **phiếu học phí và tin nhắn phụ huynh giữ nguyên tiếng Việt** — vì người nhận là phụ huynh Việt Nam.
+The **VI / EN / 한국어** switcher sits in the sidebar and on the landing page. The interface translates instantly — including dynamic content (toasts, modals, tooltips). **Tuition receipts and parent messages intentionally stay Vietnamese**, since their audience is Vietnamese parents. With a Gemini key, the AI assistant replies in whichever language the UI is set to.
 
-## Giấy phép
+## License
 
-Phát hành theo giấy phép [MIT](LICENSE) — dùng, sửa, chia sẻ tự do; chỉ cần giữ dòng ghi công.
+Released under the [MIT](LICENSE) license — use, modify and share freely; just keep the copyright line.
 
 ---
 
 <div align="center">
 
-*Sổ ghi chép cẩn thận ❦ TEdu · EST. 2026*
+*Kept with care ❦ TEdu · EST. 2026*
 
-Made with ☕ by **Tai Doan** — cùng Claude
+Made with ☕ by **Tai Doan** — together with Claude
 
 </div>
