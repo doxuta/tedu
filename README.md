@@ -62,6 +62,12 @@ Toàn bộ ứng dụng nằm trong **một file `index.html`** — không cần
 - **Giáo án & thư viện tài liệu** — soạn giáo án theo buổi; kho tài liệu nhận **mọi định dạng file** (PDF, Word, Excel, ảnh, âm thanh, video…), lưu ngay trong trình duyệt (IndexedDB), xem trước, tải về, gắn vào từng giáo án.
 - **Hướng dẫn A–Z trong app** — 10 chương có minh hoạ tương tác (demo điểm danh chạy được, lịch mẫu bấm được) ngay trong mục *Hướng dẫn*.
 
+### 🤖 Trợ lý AI
+- **Ra lệnh bằng lời thường** — *"thêm học sinh Lan lớp 8A môn Văn giá 160k"*, *"thu Minh Anh 500k"*, *"điểm danh Toán 9 hôm nay"*, *"xoá ca Văn 9"* — trợ lý tự soạn lệnh ghi sổ.
+- **Luôn hỏi xác nhận trước khi ghi**: mỗi lệnh hiện thẻ tóm tắt kiểu biên lai (Thực hiện / Huỷ), không lo AI hiểu nhầm xoá bậy.
+- **Giải đáp từ số liệu thật**: "hôm nay dạy gì?", "ai chưa đóng tiền?", "tổng thu tháng này?", "xem hồ sơ Minh Anh" — trả lời ngay kèm nút thao tác nhanh.
+- **Hai chế độ**: bộ hiểu lệnh offline chạy sẵn không cần gì; dán **khoá Gemini miễn phí** (aistudio.google.com/app/apikey) vào Cài đặt là trò chuyện tự nhiên mọi kiểu nói, mọi ngôn ngữ.
+
 ### ☁️ Tài khoản & vận hành (khi bật Firebase)
 - **Đăng nhập Google** — lần đầu đăng nhập là tự tạo sổ; mỗi giáo viên một sổ dữ liệu riêng, đồng bộ tự động (đèn "Đã đồng bộ / Đang lưu" ở sidebar).
 - **Chế độ demo cho khách** — dữ liệu mẫu đầy đủ, nghịch thoải mái, không ghi gì lên mây, thoát là tự dọn.
@@ -85,7 +91,8 @@ Toàn bộ ứng dụng nằm trong **một file `index.html`** — không cần
 | **Thời khoá biểu** — lịch tháng thật, mỗi ca một màu<br><img src="docs/screenshots/07-tkb-month.png" width="420"> | **Điểm danh** — có mặt / vắng / muộn, ghi chú từng buổi<br><img src="docs/screenshots/08-attendance.png" width="420"> |
 | **Học phí** — tự cộng theo buổi, tiến độ thu, nút thu nhanh<br><img src="docs/screenshots/09-fees.png" width="420"> | **Phiếu học phí vintage** — dấu "ĐÃ THU ĐỦ", tiền bằng chữ, VietQR<br><img src="docs/screenshots/10-receipt.png" width="420"> |
 | **Thư viện tài liệu** — mọi định dạng, xem trước, gắn vào giáo án<br><img src="docs/screenshots/11-library.png" width="420"> | **Hướng dẫn trong app** — 10 chương, minh hoạ bấm được<br><img src="docs/screenshots/12-guide.png" width="420"> |
-| **Màn đăng nhập** — Google / demo / cổng quản trị<br><img src="docs/screenshots/02-login.png" width="420"> | **Giao diện tiếng Anh** — đổi VI/EN/KO tức thì<br><img src="docs/screenshots/13-dashboard-en.png" width="420"> |
+| **Trợ lý AI** — ra lệnh bằng lời, thẻ xác nhận trước khi ghi<br><img src="docs/screenshots/14-ai.png" width="420"> | **Màn đăng nhập** — Google / demo / cổng quản trị<br><img src="docs/screenshots/02-login.png" width="420"> |
+| **Giao diện tiếng Anh** — đổi VI/EN/KO tức thì<br><img src="docs/screenshots/13-dashboard-en.png" width="420"> | |
 
 ## Dùng ngay trong 30 giây
 
@@ -127,6 +134,8 @@ index.html  (~270 KB, tất cả trong một file)
     ├── Đồng bộ     Firebase Auth (Google) + Firestore, debounce 1.5s,
     │               fallback offline khi config = null
     ├── i18n        từ điển VI/EN/KO + MutationObserver dịch giao diện động
+    ├── Trợ lý AI   bộ hiểu lệnh tiếng Việt offline + Gemini API (khoá tuỳ chọn),
+    │               mọi lệnh ghi sổ đều qua thẻ xác nhận
     └── In ấn       phiếu học phí render CSS thuần, mã VietQR (img.vietqr.io)
 ```
 

@@ -393,6 +393,38 @@ input[type=date].inp,input[type=month].inp,input[type=time].inp{padding:8px 10px
   .l-wood{width:84px}
   .l-title{font-size:clamp(88px,24vw,160px)}
 }
+/* ===== TRỢ LÝ AI ===== */
+.ai-card{padding:0;overflow:hidden}
+.ai-log{max-height:52vh;min-height:280px;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:12px;background:repeating-linear-gradient(transparent 0 27px,rgba(43,35,24,.05) 27px 28px)}
+.ai-msg{display:flex;gap:9px;align-items:flex-start}
+.ai-msg.me{justify-content:flex-end}
+.ai-av{width:26px;height:26px;flex:0 0 26px;border:1px solid #B08D3F;background:#221B12;color:#EFE6CF;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:700;font-size:12px;margin-top:2px}
+.ai-bub{max-width:80%;padding:10px 14px;border:1px solid rgba(43,35,24,.25);background:#F7F2E3;box-shadow:2px 2px 0 rgba(43,35,24,.08);font-size:13.5px;line-height:1.6}
+.ai-msg.me .ai-bub{background:#221B12;color:#EFE6CF;border-color:#221B12}
+.ai-ul{margin:8px 0 2px 18px;padding:0}
+.ai-ul li{margin:4px 0}
+.ai-chips{display:flex;gap:8px;flex-wrap:wrap;padding:10px 14px;border-top:1px solid rgba(43,35,24,.16)}
+.ai-inrow{display:flex;gap:10px;padding:12px 14px;border-top:1px solid rgba(43,35,24,.16);align-items:flex-end}
+.ai-inrow textarea{flex:1;resize:none;border:1px solid rgba(43,35,24,.3);background:#FBF7EA;padding:10px 12px;font:inherit;font-size:14px;color:#2B2318;min-height:42px;max-height:120px}
+.ai-inrow textarea:focus{outline:none;border-color:#93392C}
+.ai-send{width:48px;height:42px;display:flex;align-items:center;justify-content:center;padding:0}
+.ai-foot{padding:9px 14px;border-top:1px solid rgba(43,35,24,.16)}
+.ai-foot a{cursor:pointer;text-decoration:underline}
+.ai-act{border:1px solid #2B2318;box-shadow:inset 0 0 0 3px #F7F2E3,inset 0 0 0 4px rgba(43,35,24,.5);padding:12px 14px;margin-top:10px;background:#EDE4CD}
+.ai-act-h{font-size:10px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;display:flex;gap:6px;align-items:center;margin-bottom:8px;color:#93392C}
+.ai-r{display:flex;align-items:baseline;gap:7px;font-size:13px;padding:2.5px 0}
+.ai-r .l{color:#7A6F5C;flex-shrink:0}
+.ai-r .dots{flex:1;border-bottom:1.5px dotted rgba(43,35,24,.35);min-width:14px;transform:translateY(-3.5px)}
+.ai-r .v{text-align:right;font-weight:600}
+.ai-act-btns{display:flex;gap:8px;margin-top:11px;align-items:center;flex-wrap:wrap}
+.ai-warn{font-size:12px;color:#93392C;margin-top:7px;display:flex;gap:5px;align-items:center}
+.ai-note{font-size:12.5px;color:#7A6F5C;margin-top:6px}
+.ai-gap{height:8px}
+.ai-red{color:#93392C}.ai-grn{color:#2F5D50}
+.ai-dots i{width:6px;height:6px;background:#7A6F5C;border-radius:50%;display:inline-block;margin-right:4px;animation:aiB 1s infinite}
+.ai-dots i:nth-child(2){animation-delay:.15s}.ai-dots i:nth-child(3){animation-delay:.3s}
+@keyframes aiB{0%,60%,100%{opacity:.25}30%{opacity:1}}
+@media(max-width:720px){.ai-bub{max-width:88%}.ai-log{max-height:56vh}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}[data-rv],.pull{opacity:1!important;transform:none!important}}
 .tbl .num,.tfoot td,.stat .v,.kv .v-money{white-space:nowrap}
 .list-item b{white-space:nowrap}
@@ -529,6 +561,7 @@ input[type=date].inp,input[type=month].inp,input[type=time].inp{padding:8px 10px
     </div>
     <nav>
       <button class="nav-item active" data-page="dash" onclick="nav('dash')"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg><span>Bảng điều khiển</span></button>
+      <button class="nav-item" data-page="ai" onclick="nav('ai')"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg><span>Trợ lý AI</span></button>
       <div class="ngroup">Lớp học</div>
       <button class="nav-item" data-page="students" onclick="nav('students')"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Học sinh</span></button>
       <button class="nav-item" data-page="classes" onclick="nav('classes')"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/></svg><span>Sổ lớp</span></button>
@@ -556,6 +589,7 @@ input[type=date].inp,input[type=month].inp,input[type=time].inp{padding:8px 10px
   </aside>
   <main>
     <section class="page show" id="page-dash"></section>
+    <section class="page" id="page-ai"></section>
     <section class="page" id="page-students"></section>
     <section class="page" id="page-classes"></section>
     <section class="page" id="page-tkb"></section>
@@ -605,7 +639,7 @@ const STATUS_BD={active:'bd-grn',paused:'bd-amb',stopped:'bd-gray'};
 
 function fixup(d){
   d=d||{};
-  d.settings=Object.assign({name:'TEdu',defaultRate:150000,chargeUnexcused:false,bankInfo:'',bankId:'',bankAcc:'',bankHolder:'',qrImage:''},d.settings||{});
+  d.settings=Object.assign({name:'TEdu',defaultRate:150000,chargeUnexcused:false,bankInfo:'',bankId:'',bankAcc:'',bankHolder:'',qrImage:'',geminiKey:''},d.settings||{});
   d.students=d.students||[]; d.classes=d.classes||[]; d.attendance=d.attendance||[];
   d.classes.forEach(function(c){if(c.startDate===undefined)c.startDate='';if(c.endDate===undefined)c.endDate='';});
   d.payments=d.payments||[]; d.scores=d.scores||[]; d.lessons=d.lessons||[]; d.meta=d.meta||{}; d.slipNotes=d.slipNotes||{}; d.docs=d.docs||[];
@@ -709,7 +743,7 @@ function nav(p){
   window.scrollTo({top:0});
 }
 function render(p){
-  const map={dash:renderDash,students:renderStudents,classes:renderClasses,tkb:renderTKB,att:renderAtt,fees:renderFees,scores:renderScores,lessons:renderLessons,contact:renderContact,settings:renderSettings,admin:renderAdmin,guide:renderGuide};
+  const map={dash:renderDash,ai:renderAI,students:renderStudents,classes:renderClasses,tkb:renderTKB,att:renderAtt,fees:renderFees,scores:renderScores,lessons:renderLessons,contact:renderContact,settings:renderSettings,admin:renderAdmin,guide:renderGuide};
   (map[p]||renderDash)();
   document.getElementById('brandName').textContent=DB.settings.name||'TEdu';
 }
@@ -2405,6 +2439,12 @@ function renderGuide(){
        'Thêm quản trị viên khác bằng email. Cập nhật phiên bản web = deploy file mới đè lên hosting.'])
     +D('<div class="flex"><span class="bd bd-sky">ADMIN</span><span class="bd bd-grn">Hoạt động</span><span class="bd bd-red">Bị khoá</span><button class="btn btn-xs btn-danger" onclick="toast(\'Đây chỉ là minh hoạ\')">Khoá</button><button class="btn btn-xs btn-grn" onclick="toast(\'Đây chỉ là minh hoạ\')">Mở khoá</button></div>','Các trạng thái trong bảng tài khoản của trang Quản trị.')
     +(FB.isAdmin?'<div class="g-actions">'+A('Mở trang Quản trị',"nav('admin')")+'</div>':'<div class="hint mt">Bạn sẽ thấy mục Quản trị trong sidebar nếu email của bạn là quản trị viên.</div>')});
+  secs.push({t:'Trợ lý AI',ic:'zap',body:
+    S(['Mục <b>Trợ lý AI</b> là thư ký của tiệm: gõ lệnh bằng lời thường — <i>"thêm học sinh Lan lớp 8A môn Văn giá 160k"</i>, <i>"thu Minh Anh 500k"</i>, <i>"điểm danh Toán 9 hôm nay"</i>, <i>"ai chưa đóng tiền?"</i>',
+       'Mọi lệnh ghi sổ đều hiện <b>thẻ xác nhận</b> — bấm <b>Thực hiện</b> mới ghi thật, bấm <b>Huỷ</b> là bỏ. Không lo trợ lý hiểu nhầm.',
+       'Muốn trợ lý <b>hiểu mọi kiểu nói và tán gẫu giải đáp</b>: lấy khoá Gemini miễn phí tại <b>aistudio.google.com/app/apikey</b> rồi dán vào <b>Cài đặt → Trợ lý AI</b>. Không có khoá vẫn dùng được bộ lệnh mẫu.',
+       'Trợ lý đọc được số liệu thật của sổ (lịch hôm nay, học phí tháng, hồ sơ từng em) nên hỏi gì về sổ cũng trả lời được.'])
+    +'<div class="g-actions">'+A('Mở Trợ lý AI',"nav('ai')")+'</div>'});
   let html='<div class="ph"><div><div class="pt">Hướng dẫn sử dụng</div><div class="psub">Từ A đến Z · minh hoạ bấm thử được ngay trong trang</div></div></div>';
   html+='<div class="chips mb">'+secs.map(function(s,i){return '<span class="chip" onclick="document.getElementById(\'g-s'+i+'\').scrollIntoView({behavior:\'smooth\',block:\'start\'})">'+(i+1)+'. '+s.t+'</span>';}).join('')+'</div>';
   secs.forEach(function(s,i){
@@ -2431,6 +2471,10 @@ function renderSettings(){
     +'<div><label class="lb">Dòng chuyển khoản trong tin nhắn</label><input class="inp" value="'+H(st.bankInfo)+'" placeholder="STK: ... – Ngân hàng ... – Tên" onchange="setS(\'bankInfo\',this.value.trim())"></div>'
     +qrUploadHTML()
     +'</div><div class="hint mt">Điền mã ngân hàng + số tài khoản để <b>phiếu học phí</b> tự sinh mã VietQR kèm số tiền (ảnh QR cần internet). Mã ngân hàng theo chuẩn VietQR: BIDV, VCB (Vietcombank), TCB (Techcombank), MB, ACB, VPB, TPB, VIB, STB (Sacombank), AGRIBANK...</div></div>';
+  html+='<div class="card"><h3>'+ic('zap')+' Trợ lý AI (Gemini)</h3>'
+    +'<div class="fg"><div style="grid-column:1/-1"><label class="lb">Khoá API Gemini (miễn phí)</label><input class="inp" type="password" value="'+H(DB.settings.geminiKey||'')+'" placeholder="AIza..." autocomplete="off" data-tip="Khoá chỉ lưu trong sổ của bạn" onchange="setS(\'geminiKey\',this.value.trim());rerender()"></div></div>'
+    +'<div class="hint mt">Lấy khoá miễn phí ~1 phút tại <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="text-decoration:underline">aistudio.google.com/app/apikey</a> → Create API key → dán vào đây. Có khoá, mục <b>Trợ lý AI</b> trò chuyện tự nhiên và giải đáp mọi thắc mắc; không có khoá vẫn dùng được bộ lệnh cơ bản.</div>'
+    +'<div class="mt"><button class="btn btn-ghost" data-tip="Gửi câu chào thử tới Gemini" onclick="aiTestKey(this)">Kiểm tra kết nối</button></div></div>';
   html+='<div class="card"><h3>'+ic('save')+' Dữ liệu &amp; sao lưu</h3>'
     +'<div class="small muted mb">Hiện có:'+cnt+'</div>'
     +'<div class="flex">'
@@ -2964,9 +3008,632 @@ function admAddAdmin(){
     .then(function(){toast('Đã thêm quản trị viên '+e);admLoad();})
     .catch(function(er){toast('Lỗi: '+(er&&er.message||er));});
 }
+/* ========== TRỢ LÝ AI ========== */
+let AI_LOG=[];let AI_HIST=[];let AI_PEND={};let AI_BUSY=false;
+const AI_MODELS=['gemini-2.5-flash','gemini-2.0-flash','gemini-1.5-flash'];
+const AI_INSTANT={take_attendance:1,navigate:1};
+const AI_ACT_META={
+ add_student:{label:'Thêm học sinh',icon:'users'},
+ edit_student:{label:'Sửa học sinh',icon:'pencil'},
+ delete_student:{label:'Xoá học sinh',icon:'trash'},
+ add_class:{label:'Tạo ca học',icon:'calendar'},
+ edit_class:{label:'Sửa ca học',icon:'pencil'},
+ delete_class:{label:'Xoá ca học',icon:'trash'},
+ assign_students:{label:'Gán học sinh vào ca',icon:'users'},
+ record_payment:{label:'Ghi nhận thu học phí',icon:'credit-card'},
+ add_score:{label:'Thêm điểm kiểm tra',icon:'bar-chart'},
+ add_lesson:{label:'Thêm giáo án',icon:'book'},
+ take_attendance:{label:'Mở điểm danh',icon:'check-circle'},
+ navigate:{label:'Mở trang',icon:'arrow-right'}
+};
+const AI_FIELD_LB={name:'Tên',grade:'Lớp / Trường',subject:'Môn',rate:'Đơn giá/buổi',parentName:'Phụ huynh',parentPhone:'SĐT phụ huynh',phone:'SĐT học sinh',note:'Ghi chú',status:'Trạng thái',days:'Học vào thứ',start:'Bắt đầu',end:'Kết thúc',startDate:'Ngày bắt đầu kỳ',endDate:'Ngày kết thúc kỳ',amount:'Số tiền',month:'Cho tháng',method:'Hình thức',title:'Tên bài',score:'Điểm',date:'Ngày',content:'Nội dung',homework:'Bài tập về nhà',page:'Trang',student:'Học sinh',class:'Ca học',students:'Học sinh'};
+function aiNorm(s){return deAccent(String(s||'')).toLowerCase();}
+function aiDayName(d){return ({1:'T2',2:'T3',3:'T4',4:'T5',5:'T6',6:'T7',0:'CN'})[d]||d;}
+function aiAdd90(t){const m=/^(\d{1,2}):(\d{2})$/.exec(t||'');if(!m)return'19:30';let mm=(+m[1])*60+(+m[2])+90;return pad(Math.floor(mm/60)%24)+':'+pad(mm%60);}
+function aiStatusVN(st){return st==='active'?'Đang học':st==='paused'?'Tạm nghỉ':'Đã nghỉ';}
+/* ---------- UI ---------- */
+function renderAI(){
+  const el=document.getElementById('page-ai');
+  el.innerHTML=
+   '<div class="ph"><div><div class="pt">Trợ lý AI</div><div class="psub">Ra lệnh bằng lời — trợ lý ghi sổ giúp bạn, luôn hỏi xác nhận trước khi làm</div></div></div>'
+  +'<div class="card ai-card">'
+   +'<div class="ai-log" id="aiLog"></div>'
+   +'<div class="ai-chips">'
+     +aiChip('Hôm nay dạy gì?')+aiChip('Ai chưa đóng tiền?')+aiChip('Tổng thu tháng này')
+     +aiChip('Thêm học sinh Trần Văn An lớp 7A2 môn Toán giá 170k')+aiChip('Trợ lý làm được gì?')
+   +'</div>'
+   +'<div class="ai-inrow">'
+     +'<textarea id="aiIn" rows="1" placeholder="Hỏi hoặc ra lệnh... (VD: thu Minh Anh 500k · điểm danh Toán 9 hôm nay)"></textarea>'
+     +'<button class="btn btn-primary ai-send" id="aiSendBtn" data-tip="Gửi cho trợ lý (Enter)" onclick="aiSend()">'+ic('arrow-right',16)+'</button>'
+   +'</div>'
+   +'<div class="ai-foot hint" id="aiFoot">'+aiPageHint()+'</div>'
+  +'</div>';
+  const ta=document.getElementById('aiIn');
+  ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();aiSend();}});
+  ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';});
+  if(!AI_LOG.length)AI_LOG.push({who:'a',html:aiWelcomeHTML()});
+  aiRepaint();
+}
+function aiPageHint(){
+  const k=(DB.settings.geminiKey||'').trim();
+  if(k)return '<span class="bd bd-grn">Gemini ✓</span> Đang nối AI Gemini — hỏi gì cũng được. Trợ lý luôn xin xác nhận trước khi ghi sổ.';
+  return '<span class="bd bd-amb">Chế độ cơ bản</span> Chưa có khoá Gemini — hiểu các lệnh mẫu. Dán khoá miễn phí ở <a onclick="nav(\'settings\')">Cài đặt</a> để trò chuyện tự nhiên.';
+}
+function aiChip(t){return '<button class="chip" data-cmd="'+H(t)+'" onclick="aiQuick(this)">'+H(t)+'</button>';}
+function aiQuick(btn){const ta=document.getElementById('aiIn');ta.value=btn.getAttribute('data-cmd')||btn.textContent;aiSend();}
+function aiWelcomeHTML(){
+  return 'Chào bạn! Tôi là thư ký của tiệm. Tôi làm được:'
+  +'<ul class="ai-ul"><li><b>Thêm / sửa / xoá</b> học sinh, ca học — <i>"thêm học sinh Lan lớp 8A môn Văn giá 160k"</i></li>'
+  +'<li><b>Gán vào ca</b>, <b>thu học phí</b>, <b>thêm điểm</b> — <i>"thu Minh Anh 500k", "cho Gia Bảo 8 điểm"</i></li>'
+  +'<li><b>Mở điểm danh</b> đúng buổi — <i>"điểm danh Toán 9 hôm nay"</i></li>'
+  +'<li><b>Trả lời số liệu</b> — <i>"ai chưa đóng tiền?", "hôm nay dạy gì?"</i></li></ul>'
+  +'Mọi lệnh ghi sổ tôi đều đưa <b>thẻ xác nhận</b> trước — bấm <b>Thực hiện</b> mới ghi thật.';
+}
+function aiPush(who,html){AI_LOG.push({who:who,html:html});if(AI_LOG.length>80)AI_LOG=AI_LOG.slice(-80);aiRepaint();}
+function aiRepaint(){
+  const log=document.getElementById('aiLog');if(!log)return;
+  log.innerHTML=AI_LOG.map(function(m){
+    return '<div class="ai-msg '+(m.who==='u'?'me':'bot')+'">'+(m.who==='u'?'':'<span class="ai-av">T<sup>*</sup></span>')+'<div class="ai-bub">'+m.html+'</div></div>';
+  }).join('');
+  log.scrollTop=log.scrollHeight;
+}
+function aiTyping(on){
+  if(on){AI_LOG.push({who:'a',html:'<span class="ai-dots"><i></i><i></i><i></i></span>',typing:true});}
+  else{AI_LOG=AI_LOG.filter(function(m){return !m.typing;});}
+  aiRepaint();
+}
+function aiSend(){
+  const ta=document.getElementById('aiIn');if(!ta)return;
+  const text=ta.value.trim();if(!text||AI_BUSY)return;
+  ta.value='';ta.style.height='auto';
+  aiPush('u',H(text));
+  aiHandle(text);
+}
+async function aiHandle(text){
+  const local=aiLocalParse(text);
+  if(local){aiDeliver(local);return;}
+  const key=(DB.settings.geminiKey||'').trim();
+  if(!key){
+    aiPush('a','Tôi chưa hiểu câu này ở chế độ cơ bản. Bạn thử theo mẫu: <i>"thêm học sinh Tên lớp 9A1 môn Toán giá 180k"</i>, <i>"thu Tên 500k"</i>, <i>"xoá ca Tên ca"</i>, <i>"ai chưa đóng tiền"</i>... — hoặc dán <b>khoá Gemini miễn phí</b> ở <a onclick="nav(\'settings\')">Cài đặt</a> để tôi hiểu mọi kiểu nói.');
+    return;
+  }
+  AI_BUSY=true;aiTyping(true);
+  try{
+    const raw=await aiLLM(text);
+    aiTyping(false);
+    let obj=null;
+    try{obj=JSON.parse(String(raw).replace(/^```(?:json)?/,'').replace(/```\s*$/,'').trim());}catch(e){}
+    if(!obj||typeof obj.reply!=='string'){aiPush('a',H(String(raw).slice(0,800)));}
+    else{
+      AI_HIST.push({role:'user',text:text});
+      AI_HIST.push({role:'model',text:String(raw).slice(0,1500)});
+      if(AI_HIST.length>16)AI_HIST=AI_HIST.slice(-16);
+      aiDeliver({html:aiMd(obj.reply),actions:Array.isArray(obj.actions)?obj.actions:[]});
+    }
+  }catch(e){
+    aiTyping(false);
+    aiPush('a','<span class="bd bd-red">Lỗi</span> '+H(e.message||String(e)));
+  }
+  AI_BUSY=false;
+}
+function aiMd(s){
+  let h=H(String(s||''));
+  h=h.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+  return h;
+}
+function aiDeliver(r){
+  let html=r.html||'';
+  const acts=(r.actions||[]).filter(function(a){return a&&AI_ACT_META[a.type];});
+  const cards=[];
+  acts.forEach(function(a){
+    if(AI_INSTANT[a.type]){const res=aiExec(a);if(res.msg)cards.push('<div class="ai-note">'+H(res.msg)+'</div>');}
+    else cards.push(aiCard(a));
+  });
+  if(cards.length)html+=(html?'<div class="ai-gap"></div>':'')+cards.join('');
+  if(html)aiPush('a',html);
+}
+/* ---------- thẻ xác nhận ---------- */
+function aiCard(a){
+  const id=uid();AI_PEND[id]=a;
+  const meta=AI_ACT_META[a.type];
+  return '<div class="ai-act" id="aiact_'+id+'">'
+   +'<div class="ai-act-h">'+ic(meta.icon,13)+' <span>'+H(meta.label)+'</span></div>'
+   +aiCardRows(a)
+   +'<div class="ai-act-btns" data-a="'+id+'"><button class="btn btn-sm btn-primary" data-tip="Ghi vào sổ" onclick="aiRun(\''+id+'\')">Thực hiện</button><button class="btn btn-sm btn-ghost" onclick="aiCancel(\''+id+'\')">Huỷ</button></div></div>';
+}
+function aiRow(lb,val){return '<div class="ai-r"><span class="l">'+H(lb)+'</span><span class="dots"></span><span class="v">'+val+'</span></div>';}
+function aiCardRows(a){
+  const R=[];
+  function add(lb,v){if(v!==undefined&&v!==''&&v!==null)R.push(aiRow(AI_FIELD_LB[lb]||lb,v));}
+  const sName=function(id){const s=studentById(id);return s?H(s.name):'<i>?</i>';};
+  const cName=function(id){const c=classById(id);return c?H(c.name):'<i>?</i>';};
+  switch(a.type){
+    case 'add_student':add('name',H(a.name));add('grade',H(a.grade));add('subject',H(a.subject));add('rate',a.rate?fmtM(+a.rate):fmtM(DB.settings.defaultRate)+' <i>(mặc định)</i>');add('parentName',H(a.parentName));add('parentPhone',H(a.parentPhone));add('phone',H(a.phone));add('note',H(a.note));if(a.classId)add('class',cName(a.classId));break;
+    case 'edit_student':add('student',sName(a.studentId));Object.keys(a.set||{}).forEach(function(k){var v=a.set[k];add(k,k==='rate'?fmtM(+v):(k==='status'?H(aiStatusVN(v)):H(String(v))));});break;
+    case 'delete_student':add('student',sName(a.studentId));R.push('<div class="ai-warn">'+ic('alert',12)+' Xoá cả điểm danh, học phí, điểm của em này.</div>');break;
+    case 'add_class':add('name',H(a.name));add('subject',H(a.subject));add('days',(a.days||[]).map(aiDayName).join(', '));add('start',H(a.start||'18:00'));add('end',H(a.end||aiAdd90(a.start||'18:00')));add('startDate',a.startDate?fmtD(a.startDate):'');add('endDate',a.endDate?fmtD(a.endDate):'');if((a.studentIds||[]).length)add('students',a.studentIds.map(sName).join(', '));break;
+    case 'edit_class':add('class',cName(a.classId));Object.keys(a.set||{}).forEach(function(k){var v=a.set[k];add(k,k==='days'?(v||[]).map(aiDayName).join(', '):H(String(v)));});break;
+    case 'delete_class':add('class',cName(a.classId));R.push('<div class="ai-warn">'+ic('alert',12)+' Lịch sử điểm danh của ca vẫn được giữ để tính học phí.</div>');break;
+    case 'assign_students':add('class',cName(a.classId));add('students',(a.studentIds||[]).map(sName).join(', '));break;
+    case 'record_payment':add('student',sName(a.studentId));add('amount','<b>'+fmtM(+a.amount)+'</b>');add('month',H(a.month||curMonth()));add('method',H(a.method||'Chuyển khoản'));add('note',H(a.note));break;
+    case 'add_score':add('student',sName(a.studentId));add('title',H(a.title||'Kiểm tra'));add('score','<b>'+H(String(a.score))+'</b>');add('date',fmtD(a.date||todayStr()));add('note',H(a.note));break;
+    case 'add_lesson':add('title',H(a.title));if(a.classId)add('class',cName(a.classId));add('date',fmtD(a.date||todayStr()));add('content',H(String(a.content||'').slice(0,120)));add('homework',H(a.homework));break;
+  }
+  return R.join('');
+}
+function aiSetCardResult(id,inner){
+  const rx=new RegExp('(<div class="ai-act-btns" data-a="'+id+'">)[\\s\\S]*?(<\\/div>)');
+  AI_LOG.forEach(function(m){if(m.html&&m.html.indexOf('aiact_'+id)>=0)m.html=m.html.replace(rx,'$1'+inner+'$2');});
+  aiRepaint();
+}
+function aiRun(id){
+  const a=AI_PEND[id];if(!a)return;delete AI_PEND[id];
+  const r=aiExec(a);
+  if(r.ok)aiSetCardResult(id,'<span class="bd bd-grn">✓ Đã thực hiện</span>'+(r.page?' <button class="btn btn-xs btn-ghost" onclick="nav(\''+r.page+'\')">Xem</button>':''));
+  else aiSetCardResult(id,'<span class="bd bd-red">'+H(r.msg||'Lỗi')+'</span>');
+  if(r.ok&&r.msg)toast(r.msg);
+}
+function aiCancel(id){delete AI_PEND[id];aiSetCardResult(id,'<span class="bd bd-gray">Đã huỷ</span>');}
+/* ---------- thực thi ---------- */
+function aiExec(a){
+ try{
+  switch(a.type){
+   case 'add_student':{
+     if(!a.name)return{ok:false,msg:'Thiếu tên'};
+     const s={id:uid(),name:String(a.name),grade:a.grade||'',subject:a.subject||'',rate:+a.rate||DB.settings.defaultRate,parentName:a.parentName||'',parentPhone:a.parentPhone||'',phone:a.phone||'',dob:'',address:'',startDate:todayStr(),status:'active',note:a.note||''};
+     DB.students.push(s);
+     if(a.classId){const c=classById(a.classId);if(c){c.studentIds=c.studentIds||[];if(c.studentIds.indexOf(s.id)<0)c.studentIds.push(s.id);}}
+     save();return{ok:true,msg:'Đã thêm '+s.name,page:'students'};}
+   case 'edit_student':{
+     const s=studentById(a.studentId);if(!s)return{ok:false,msg:'Không tìm thấy học sinh'};
+     const set=a.set||{};
+     ['name','grade','subject','parentName','parentPhone','phone','note','status'].forEach(function(k){if(set[k]!==undefined)s[k]=set[k];});
+     if(set.rate!==undefined){const r=+set.rate;if(r>0)s.rate=r;}
+     save();return{ok:true,msg:'Đã cập nhật '+s.name,page:'students'};}
+   case 'delete_student':{
+     const s=studentById(a.studentId);if(!s)return{ok:false,msg:'Không tìm thấy học sinh'};
+     DB.students=DB.students.filter(function(x){return x.id!==s.id;});
+     DB.classes.forEach(function(c){c.studentIds=(c.studentIds||[]).filter(function(i){return i!==s.id;});});
+     DB.attendance.forEach(function(r){r.records=(r.records||[]).filter(function(x){return x.studentId!==s.id;});});
+     DB.payments=DB.payments.filter(function(p){return p.studentId!==s.id;});
+     DB.scores=DB.scores.filter(function(p){return p.studentId!==s.id;});
+     save();return{ok:true,msg:'Đã xoá '+s.name,page:'students'};}
+   case 'add_class':{
+     if(!a.name)return{ok:false,msg:'Thiếu tên ca'};
+     const days=(a.days||[]).map(Number).filter(function(d){return d>=0&&d<=6;});
+     if(!days.length)return{ok:false,msg:'Thiếu thứ trong tuần'};
+     const c={id:uid(),name:String(a.name),subject:a.subject||'',days:days,start:a.start||'18:00',end:a.end||aiAdd90(a.start||'18:00'),color:PALETTE[DB.classes.length%PALETTE.length],studentIds:(a.studentIds||[]).filter(function(id){return !!studentById(id);}),startDate:a.startDate||todayStr(),endDate:a.endDate||''};
+     DB.classes.push(c);save();return{ok:true,msg:'Đã tạo ca '+c.name,page:'classes'};}
+   case 'edit_class':{
+     const c=classById(a.classId);if(!c)return{ok:false,msg:'Không tìm thấy ca học'};
+     const set=a.set||{};
+     ['name','subject','start','end','startDate','endDate'].forEach(function(k){if(set[k]!==undefined)c[k]=set[k];});
+     if(set.days!==undefined){const days=(set.days||[]).map(Number).filter(function(d){return d>=0&&d<=6;});if(days.length)c.days=days;}
+     save();return{ok:true,msg:'Đã cập nhật ca '+c.name,page:'classes'};}
+   case 'delete_class':{
+     const c=classById(a.classId);if(!c)return{ok:false,msg:'Không tìm thấy ca học'};
+     DB.classes=DB.classes.filter(function(x){return x.id!==c.id;});
+     save();return{ok:true,msg:'Đã xoá ca '+c.name,page:'classes'};}
+   case 'assign_students':{
+     const c=classById(a.classId);if(!c)return{ok:false,msg:'Không tìm thấy ca học'};
+     c.studentIds=c.studentIds||[];let n=0;
+     (a.studentIds||[]).forEach(function(id){if(studentById(id)&&c.studentIds.indexOf(id)<0){c.studentIds.push(id);n++;}});
+     save();return{ok:true,msg:'Đã gán '+n+' học sinh vào '+c.name,page:'classes'};}
+   case 'record_payment':{
+     const s=studentById(a.studentId);if(!s)return{ok:false,msg:'Không tìm thấy học sinh'};
+     const amt=+a.amount;if(!amt||amt<=0)return{ok:false,msg:'Số tiền không hợp lệ'};
+     DB.payments.push({id:uid(),studentId:s.id,month:a.month||curMonth(),amount:amt,paidAt:todayStr(),method:a.method||'Chuyển khoản',note:a.note||''});
+     save();return{ok:true,msg:'Đã ghi nhận '+fmtM(amt)+' — '+s.name,page:'fees'};}
+   case 'add_score':{
+     const s=studentById(a.studentId);if(!s)return{ok:false,msg:'Không tìm thấy học sinh'};
+     const sc=+a.score;if(isNaN(sc)||sc<0||sc>10)return{ok:false,msg:'Điểm phải từ 0 đến 10'};
+     DB.scores.push({id:uid(),studentId:s.id,date:a.date||todayStr(),title:a.title||'Kiểm tra',score:sc,note:a.note||''});
+     save();return{ok:true,msg:'Đã lưu điểm '+sc+' — '+s.name,page:'scores'};}
+   case 'add_lesson':{
+     if(!a.title)return{ok:false,msg:'Thiếu tiêu đề'};
+     DB.lessons.unshift({id:uid(),date:a.date||todayStr(),classId:a.classId||'',title:String(a.title),content:a.content||'',homework:a.homework||'',docIds:[]});
+     save();return{ok:true,msg:'Đã lưu giáo án',page:'lessons'};}
+   case 'take_attendance':{
+     const c=classById(a.classId);if(!c)return{ok:false,msg:'Không tìm thấy ca học'};
+     gotoAtt(a.date||todayStr(),c.id);return{ok:true,msg:''};}
+   case 'navigate':{
+     const ok=['dash','students','classes','tkb','att','fees','scores','lessons','contact','settings','guide','ai'];
+     if(ok.indexOf(a.page)<0)return{ok:false,msg:'Trang không tồn tại'};
+     nav(a.page);return{ok:true,msg:''};}
+  }
+ }catch(e){return{ok:false,msg:'Lỗi: '+(e.message||e)};}
+ return{ok:false,msg:'Lệnh không hỗ trợ'};
+}
+/* ---------- tìm mờ ---------- */
+function aiFindStudents(q){
+  const nq=aiNorm(q).trim();if(!nq)return[];
+  const parts=nq.split(/\s+/);
+  const scored=DB.students.map(function(s){
+    const nn=aiNorm(s.name);let sc=0;
+    if(nn===nq)sc=100;
+    else if(nn.split(/\s+/).slice(-parts.length).join(' ')===nq)sc=85;
+    else if(nn.indexOf(nq)>=0)sc=65;
+    else if(parts.every(function(p){return nn.indexOf(p)>=0;}))sc=45;
+    return{s:s,sc:sc};
+  }).filter(function(x){return x.sc>0;}).sort(function(a,b){return b.sc-a.sc;});
+  if(!scored.length)return[];
+  const top=scored[0].sc;
+  return scored.filter(function(x){return x.sc>=top-5;}).map(function(x){return x.s;});
+}
+function aiFindClasses(q){
+  const nq=aiNorm(q).trim();if(!nq)return[];
+  const parts=nq.split(/\s+/);
+  const scored=DB.classes.map(function(c){
+    const nn=aiNorm(c.name);let sc=0;
+    if(nn===nq)sc=100;else if(nn.indexOf(nq)>=0)sc=70;
+    else if(parts.every(function(p){return nn.indexOf(p)>=0;}))sc=45;
+    return{c:c,sc:sc};
+  }).filter(function(x){return x.sc>0;}).sort(function(a,b){return b.sc-a.sc;});
+  if(!scored.length)return[];
+  const top=scored[0].sc;
+  return scored.filter(function(x){return x.sc>=top-5;}).map(function(x){return x.c;});
+}
+function aiAmbig(list,kind){
+  return{html:'Tôi thấy nhiều '+(kind==='c'?'ca học':'học sinh')+' khớp — ý bạn là ai/ca nào? '+list.slice(0,5).map(function(x){return '<b>'+H(x.name)+'</b>';}).join(' · ')+'. Bạn gõ lại đầy đủ tên nhé.',actions:[]};
+}
+/* ---------- tiền / ngày / thứ / giờ ---------- */
+function aiMoneyIn(str){
+  const s=aiNorm(str).replace(/\./g,'');
+  let m=/(\d+)\s*(?:trieu|tr)(?![a-z])\s*(\d)?(?!\d)/.exec(s);
+  if(m)return (+m[1])*1e6+(m[2]?+m[2]*1e5:0);
+  m=/(\d+(?:,\d+)?)\s*(?:k|nghin|ngan)(?![a-z])/.exec(s);
+  if(m)return Math.round(parseFloat(m[1].replace(',','.'))*1000);
+  m=/(\d{4,9})\s*(?:d|dong|vnd)(?![a-z])/.exec(s);
+  if(m)return +m[1];
+  m=/(?:^|[^0-9a-z])(\d{4,9})(?![0-9])/.exec(s);
+  if(m)return +m[1];
+  m=/\bgia\s+(\d{2,3})(?![0-9])/.exec(s);
+  if(m)return +m[1]*1000;
+  return 0;
+}
+function aiDateIn(str){
+  const s=aiNorm(str);
+  if(/ngay mai|\bmai\b/.test(s))return dAdd(todayStr(),1);
+  if(/hom qua/.test(s))return dAdd(todayStr(),-1);
+  const m=/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/.exec(s);
+  if(m){const y=m[3]?(m[3].length===2?'20'+m[3]:m[3]):todayStr().slice(0,4);return y+'-'+pad(+m[2])+'-'+pad(+m[1]);}
+  return todayStr();
+}
+function aiDaysIn(str){
+  const s=aiNorm(str);const set=[];
+  const map={2:1,3:2,4:3,5:4,6:5,7:6};
+  let m;const rx=/\b(?:t|thu\s*)([2-7])\b/g;
+  while((m=rx.exec(s)))if(set.indexOf(map[+m[1]])<0)set.push(map[+m[1]]);
+  if(/\bcn\b|chu nhat/.test(s)&&set.indexOf(0)<0)set.push(0);
+  return set;
+}
+function aiTimesIn(str){
+  const s=aiNorm(str);
+  const rx=/(\d{1,2})(?::|h)(\d{2})?/g;const out=[];let m;
+  while((m=rx.exec(s))){const hh=+m[1];if(hh>=5&&hh<=23)out.push(pad(hh)+':'+(m[2]||'00'));}
+  return out;
+}
+/* ---------- bộ hiểu lệnh offline ---------- */
+function aiLocalParse(text){
+  const nt=aiNorm(text).replace(/\s+/g,' ').trim();
+  const tokens=text.trim().split(/\s+/);
+  const ntok=tokens.map(aiNorm);
+  /* trợ giúp */
+  if(/^(help|\?|lam duoc gi|giup (duoc )?gi( duoc)?|huong dan( su dung)?( tro ly)?)/.test(nt)||/tro ly lam duoc gi/.test(nt))
+    return{html:aiWelcomeHTML(),actions:[]};
+  /* truy vấn nhanh */
+  if(/(hom nay|bua nay).*(day|hoc|co ca|lich)|^lich hom nay|^hom nay day gi/.test(nt))return aiQToday(todayStr());
+  if(/(ngay mai|^mai\b).*(day|hoc|co ca|lich)|^lich (ngay )?mai/.test(nt))return aiQToday(dAdd(todayStr(),1));
+  if(/(ai|em nao|nhung ai|ban nao).*(chua (dong|nop|thu)|con (no|thieu))|chua thu du|chua dong tien/.test(nt))return aiQUnpaid(curMonth());
+  if(/(tong|doanh) thu|thu duoc bao nhieu|hoc phi thang nay|tong hoc phi/.test(nt))return aiQMonth(curMonth());
+  if(/bao nhieu hoc sinh|may hoc sinh|si so|co bao nhieu em|tong so hoc sinh/.test(nt))return aiQCount();
+  /* điều hướng */
+  let m=/^(?:mo|chuyen|vao|di den)\s+(?:trang\s+)?(.+)$/.exec(nt);
+  if(m){
+    const pmap=[['hoc sinh','students'],['so lop','classes'],['ca hoc','classes'],['thoi khoa bieu','tkb'],['lich','tkb'],['diem danh','att'],['hoc phi','fees'],['diem','scores'],['giao an','lessons'],['tai lieu','lessons'],['lien lac','contact'],['danh ba','contact'],['cai dat','settings'],['huong dan','guide'],['tong quan','dash'],['bang dieu khien','dash'],['tro ly','ai'],['quan tri','admin']];
+    for(const p of pmap)if(m[1].indexOf(p[0])===0)return{html:'Mở trang ngay đây.',actions:[{type:'navigate',page:p[1]}]};
+  }
+  /* điểm danh */
+  m=/^diem danh(?:\s+ca)?\s*(.*)$/.exec(nt);
+  if(m!==null&&/^diem danh/.test(nt)){
+    let rest=m[1].replace(/hom nay|ngay mai|\bmai\b|hom qua|\b\d{1,2}[\/-]\d{1,2}([\/-]\d{2,4})?\b/g,'').trim();
+    const date=aiDateIn(nt);
+    if(!rest){
+      const list=classesOnDay(dowOf(date),date);
+      if(!list.length)return{html:'Ngày '+fmtD(date)+' không có ca nào theo lịch.',actions:[]};
+      if(list.length===1)return{html:'Mở điểm danh <b>'+H(list[0].name)+'</b> ngày '+fmtD(date)+'.',actions:[{type:'take_attendance',classId:list[0].id,date:date}]};
+      return{html:'Ngày '+fmtD(date)+' có: '+list.map(function(c){return '<b>'+H(c.name)+'</b>';}).join(' · ')+'. Bạn nói rõ ca nào nhé — VD: <i>"điểm danh '+H(list[0].name)+'"</i>.',actions:[]};
+    }
+    const cs=aiFindClasses(rest);
+    if(!cs.length)return{html:'Không tìm thấy ca "'+H(rest)+'".',actions:[]};
+    if(cs.length>1)return aiAmbig(cs,'c');
+    return{html:'Mở điểm danh <b>'+H(cs[0].name)+'</b> ngày '+fmtD(date)+'.',actions:[{type:'take_attendance',classId:cs[0].id,date:date}]};
+  }
+  /* thêm học sinh */
+  m=/^(?:them|tao|nhap)\s+(?:hoc sinh|hs|em)\s+(.+)$/.exec(nt);
+  if(m){
+    const kw=['lop','truong','mon','gia','don','sdt','sđt','dien','phu','ph','me','bo','ghi','so'];
+    let iStart=ntok.findIndex(function(t,i){return (t==='hoc'&&ntok[i+1]==='sinh')||t==='hs'||(i>0&&t==='em');});
+    iStart+= (ntok[iStart]==='hoc')?2:1;
+    let iEnd=iStart;
+    while(iEnd<ntok.length&&kw.indexOf(ntok[iEnd])<0)iEnd++;
+    const name=tokens.slice(iStart,iEnd).join(' ');
+    if(!name)return{html:'Bạn cho tôi xin tên học sinh nhé.',actions:[]};
+    const a={type:'add_student',name:name};
+    const grab=function(kws,stop){
+      const i=ntok.findIndex(function(t,idx){return idx>=iEnd&&kws.indexOf(t)>=0;});
+      if(i<0)return '';
+      let j=i+1;if(ntok[i]==='don'&&ntok[j]==='gia')j++;if(ntok[i]==='phu'&&ntok[j]==='huynh')j++;if(ntok[i]==='ghi'&&ntok[j]==='chu')j++;
+      let k=j;while(k<ntok.length&&kw.indexOf(ntok[k])<0&&(k-j)<(stop||4))k++;
+      return tokens.slice(j,k).join(' ');
+    };
+    const gr=grab(['lop','truong']);if(gr)a.grade=gr;
+    const su=grab(['mon'],3);if(su)a.subject=su;
+    const ph=grab(['phu','ph','me','bo'],4);if(ph)a.parentName=ph;
+    const rate=aiMoneyIn(nt);if(rate)a.rate=rate;
+    const tel=/\b(0\d{9,10})\b/.exec(nt);if(tel)a.parentPhone=tel[1];
+    return{html:'Bạn xem lại rồi bấm Thực hiện nhé:',actions:[a]};
+  }
+  /* thêm ca */
+  m=/^(?:them|tao)\s+(?:ca|lop)(?:\s+hoc)?\s+(.+)$/.exec(nt);
+  if(m){
+    const days=aiDaysIn(nt),times=aiTimesIn(nt);
+    let namePart=/^(?:them|tao)\s+(?:ca|lop)(?:\s+hoc)?\s+/.exec(nt)[0];
+    let rest=text.trim().slice(namePart.length);
+    const stopRx=/(\s+(?:vao\s+)?(?:t[2-7]|cn|thu\s*[2-7]|chu nhat)\b|\s+\d{1,2}(?::|h)|\s+tu ngay|\s+luc\b)/i;
+    const mm=stopRx.exec(deAccent(rest).toLowerCase());
+    const name=(mm?rest.slice(0,mm.index):rest).replace(/^"|"$/g,'').trim();
+    if(!name)return{html:'Bạn đặt tên cho ca học nhé.',actions:[]};
+    if(!days.length)return{html:'Ca <b>'+H(name)+'</b> học vào thứ mấy? (VD: <i>"thêm ca '+H(name)+' T3 T6 18:00"</i>)',actions:[]};
+    const a={type:'add_class',name:name,days:days};
+    if(times[0])a.start=times[0];
+    if(times[1])a.end=times[1];
+    const tm=/tu ngay\s+(\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?)(?:\s+den(?:\s+ngay)?\s+(\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?))?/.exec(nt);
+    if(tm){a.startDate=aiDateIn(tm[1]);if(tm[2])a.endDate=aiDateIn(tm[2]);}
+    return{html:'Bạn xem lại rồi bấm Thực hiện nhé:',actions:[a]};
+  }
+  /* xoá */
+  m=/^xoa\s+(?:hoc sinh|hs|em)\s+(.+)$/.exec(nt);
+  if(m){const ss=aiFindStudents(m[1]);if(!ss.length)return{html:'Không tìm thấy học sinh "'+H(m[1])+'".',actions:[]};if(ss.length>1)return aiAmbig(ss,'s');
+    return{html:'Xác nhận trước khi xoá:',actions:[{type:'delete_student',studentId:ss[0].id}]};}
+  m=/^xoa\s+(?:ca|lop)(?:\s+hoc)?\s+(.+)$/.exec(nt);
+  if(m){const cs=aiFindClasses(m[1]);if(!cs.length)return{html:'Không tìm thấy ca "'+H(m[1])+'".',actions:[]};if(cs.length>1)return aiAmbig(cs,'c');
+    return{html:'Xác nhận trước khi xoá:',actions:[{type:'delete_class',classId:cs[0].id}]};}
+  /* đổi giá / trạng thái / sửa nhanh */
+  m=/^(?:doi|sua|dat|chinh)\s+(?:don\s*)?gia(?:\s+cua)?\s+(.+?)\s+(?:thanh|la|=)?\s*([\d.,]+\s*(?:k|nghin|ngan|tr|trieu|d|dong)?)$/.exec(nt);
+  if(m){const ss=aiFindStudents(m[1]);if(!ss.length)return{html:'Không tìm thấy học sinh "'+H(m[1])+'".',actions:[]};if(ss.length>1)return aiAmbig(ss,'s');
+    const r=aiMoneyIn(m[2]);if(!r)return{html:'Tôi chưa đọc được số tiền.',actions:[]};
+    return{html:'Xác nhận:',actions:[{type:'edit_student',studentId:ss[0].id,set:{rate:r}}]};}
+  m=/^cho\s+(.+?)\s+(tam nghi|nghi tam|hoc lai|di hoc lai|nghi han|thoi hoc|nghi luon)$/.exec(nt);
+  if(m){const ss=aiFindStudents(m[1]);if(!ss.length)return{html:'Không tìm thấy học sinh "'+H(m[1])+'".',actions:[]};if(ss.length>1)return aiAmbig(ss,'s');
+    const st=/hoc lai/.test(m[2])?'active':(/han|thoi|luon/.test(m[2])?'stopped':'paused');
+    return{html:'Xác nhận:',actions:[{type:'edit_student',studentId:ss[0].id,set:{status:st}}]};}
+  /* gán vào ca */
+  m=/^(?:gan|them|cho)\s+(.+?)\s+vao\s+(?:ca|lop)(?:\s+hoc)?\s+(.+)$/.exec(nt);
+  if(m){
+    const cs=aiFindClasses(m[2]);if(!cs.length)return{html:'Không tìm thấy ca "'+H(m[2])+'".',actions:[]};if(cs.length>1)return aiAmbig(cs,'c');
+    const names=m[1].split(/\s*(?:,|va)\s+/);
+    const ids=[];const miss=[];
+    names.forEach(function(nm){const ss=aiFindStudents(nm);if(ss.length===1)ids.push(ss[0].id);else miss.push(nm);});
+    if(!ids.length)return{html:'Không nhận ra học sinh nào trong "'+H(m[1])+'".',actions:[]};
+    let html='Xác nhận:';if(miss.length)html='Chưa nhận ra: '+miss.map(function(x){return '<b>'+H(x)+'</b>';}).join(', ')+'. Phần còn lại:';
+    return{html:html,actions:[{type:'assign_students',classId:cs[0].id,studentIds:ids}]};
+  }
+  /* thu tiền */
+  m=/^(?:thu|ghi nhan thu|nop)\s+(?:tien|hoc phi)?\s*(?:cua\s+)?(.+?)\s+([\d.,]+\s*(?:k|nghin|ngan|tr|trieu|d|dong)?)\s*(?:thang\s+(\d{1,2}))?$/.exec(nt);
+  if(m){
+    const ss=aiFindStudents(m[1]);if(!ss.length)return{html:'Không tìm thấy học sinh "'+H(m[1])+'".',actions:[]};if(ss.length>1)return aiAmbig(ss,'s');
+    const amt=aiMoneyIn(m[2]);if(!amt)return{html:'Tôi chưa đọc được số tiền.',actions:[]};
+    const month=m[3]?todayStr().slice(0,4)+'-'+pad(+m[3]):curMonth();
+    return{html:'Xác nhận:',actions:[{type:'record_payment',studentId:ss[0].id,amount:amt,month:month}]};
+  }
+  /* thêm điểm */
+  m=/^(?:cho|them diem|nhap diem)\s+(.+?)\s+(\d{1,2}(?:[.,]\d)?)\s*diem(?:\s+(?:bai|mon)?\s*(.*))?$/.exec(nt)||/^(?:them|nhap)\s+diem\s+(.+?)\s+(\d{1,2}(?:[.,]\d)?)(?:\s+(?:bai)?\s*(.*))?$/.exec(nt);
+  if(m){
+    const ss=aiFindStudents(m[1]);if(!ss.length)return{html:'Không tìm thấy học sinh "'+H(m[1])+'".',actions:[]};if(ss.length>1)return aiAmbig(ss,'s');
+    const sc=parseFloat(String(m[2]).replace(',','.'));
+    return{html:'Xác nhận:',actions:[{type:'add_score',studentId:ss[0].id,score:sc,title:(m[3]||'Kiểm tra').trim()||'Kiểm tra'}]};
+  }
+  /* xem hồ sơ */
+  m=/^(?:xem|thong tin|ho so)\s+(?:hoc sinh|hs|em|cua)?\s*(.+)$/.exec(nt);
+  if(m){const ss=aiFindStudents(m[1]);if(ss.length===1)return aiQStudent(ss[0]);if(ss.length>1)return aiAmbig(ss,'s');}
+  /* gõ đúng tên một em */
+  const byName=aiFindStudents(nt);
+  if(byName.length===1&&aiNorm(byName[0].name).length>=nt.length-2)return aiQStudent(byName[0]);
+  return null;
+}
+/* ---------- truy vấn ---------- */
+function aiQToday(date){
+  const list=classesOnDay(dowOf(date),date);
+  if(!list.length)return{html:'Ngày <b>'+fmtD(date)+'</b> không có ca nào theo lịch. Nghỉ ngơi thôi ☕',actions:[]};
+  const rows=list.map(function(c){
+    const done=!!findAtt(date,c.id);
+    const n=(c.studentIds||[]).filter(function(id){return studentById(id);}).length;
+    return aiRow(c.start+'–'+c.end,'<b>'+H(c.name)+'</b> · '+n+' HS '+(done?'<span class="bd bd-grn">✓ Đã điểm danh</span>':'<button class="btn btn-xs btn-ghost" onclick="gotoAtt(\''+date+'\',\''+c.id+'\')">Điểm danh</button>'));
+  }).join('');
+  return{html:'Lịch ngày <b>'+fmtD(date)+'</b>:'+rows,actions:[]};
+}
+function aiQUnpaid(month){
+  const rows=[];let total=0;
+  DB.students.forEach(function(s){
+    const fee=monthFee(s.id,month),paid=monthPaid(s.id,month);
+    if(fee>paid){total+=fee-paid;rows.push(aiRow(s.name,'<b class="ai-red">'+fmtM(fee-paid)+'</b> <button class="btn btn-xs btn-ghost" onclick="nav(\'fees\')">Thu</button>'));}
+  });
+  if(!rows.length)return{html:'Tháng này <b>đã thu đủ của tất cả học sinh</b>. Tuyệt vời! ✓',actions:[]};
+  return{html:'Còn <b>'+rows.length+'</b> em chưa đóng đủ (tổng <b class="ai-red">'+fmtM(total)+'</b>):'+rows.join(''),actions:[]};
+}
+function aiQMonth(month){
+  let fee=0,paid=0,sess=0;
+  DB.students.forEach(function(s){fee+=monthFee(s.id,month);paid+=monthPaid(s.id,month);sess+=countBillable(s.id,month);});
+  return{html:'Tháng <b>'+month.slice(5)+'/'+month.slice(0,4)+'</b>: '+aiRow('Buổi tính phí',String(sess))+aiRow('Học phí dự kiến',fmtM(fee))+aiRow('Đã thu','<b class="ai-grn">'+fmtM(paid)+'</b>')+aiRow('Còn lại','<b class="ai-red">'+fmtM(fee-paid)+'</b>'),actions:[]};
+}
+function aiQCount(){
+  const act=DB.students.filter(function(s){return s.status==='active';}).length;
+  const open=DB.classes.filter(function(c){return classStatusInfo(c).k==='open';}).length;
+  return{html:aiRow('Học sinh',DB.students.length+' (đang học '+act+')')+aiRow('Ca học',DB.classes.length+' (đang mở '+open+')')+aiRow('Buổi đã điểm danh',String(DB.attendance.length)),actions:[]};
+}
+function aiQStudent(s){
+  const month=curMonth();
+  const fee=monthFee(s.id,month),paid=monthPaid(s.id,month),ses=countBillable(s.id,month);
+  const cls=classesOfStudent(s.id).map(function(c){return c.name;}).join(', ')||'—';
+  const sc=DB.scores.filter(function(x){return x.studentId===s.id;}).sort(function(a,b){return b.date.localeCompare(a.date);}).slice(0,3);
+  return{html:'<b>'+H(s.name)+'</b> · '+H(s.grade||'')+' <span class="bd '+(s.status==='active'?'bd-grn':s.status==='paused'?'bd-amb':'bd-gray')+'">'+aiStatusVN(s.status)+'</span>'
+   +aiRow('Môn / đơn giá',H(s.subject||'—')+' · '+fmtM(s.rate))
+   +aiRow('Ca học',H(cls))
+   +aiRow('Tháng này',ses+' buổi · '+fmtM(fee)+' · đã thu '+fmtM(paid))
+   +(sc.length?aiRow('Điểm gần đây',sc.map(function(x){return H(x.title)+': <b>'+x.score+'</b>';}).join(' · ')):'')
+   +'<div class="mt"><button class="btn btn-xs btn-ghost" onclick="openProfile(\''+s.id+'\')">Hồ sơ đầy đủ</button></div>',actions:[]};
+}
+/* ---------- Gemini ---------- */
+function aiCtx(){
+  const month=curMonth();
+  return JSON.stringify({
+    today:todayStr(),month:month,lang:LANG,
+    settings:{defaultRate:DB.settings.defaultRate,chargeUnexcused:DB.settings.chargeUnexcused},
+    students:DB.students.map(function(s){return{id:s.id,name:s.name,grade:s.grade,subject:s.subject,rate:s.rate,status:s.status,parent:s.parentName};}),
+    classes:DB.classes.map(function(c){return{id:c.id,name:c.name,days:c.days,start:c.start,end:c.end,from:c.startDate,to:c.endDate,students:(c.studentIds||[]).map(function(id){var s=studentById(id);return s?s.name:null;}).filter(Boolean)};}),
+    feesThisMonth:DB.students.map(function(s){return{name:s.name,sessions:countBillable(s.id,month),fee:monthFee(s.id,month),paid:monthPaid(s.id,month)};})
+  });
+}
+function aiSysPrompt(){
+  const langName=LANG==='en'?'English':(LANG==='ko'?'Korean':'Vietnamese');
+  return 'You are the assistant inside TEdu, a ledger app for a private tutor. Today is '+todayStr()+'.\n'
+  +'ALWAYS answer with STRICT JSON only: {"reply": string, "actions": Action[]}. No markdown fences.\n'
+  +'"reply" is a short helpful answer in '+langName+' (you may use **bold**).\n'
+  +'Action types (use EXACT ids from CONTEXT, never invent):\n'
+  +'add_student{name,grade,subject,rate,parentName,parentPhone,phone,note,classId?}\n'
+  +'edit_student{studentId,set:{name?,grade?,subject?,rate?,parentName?,parentPhone?,phone?,note?,status?("active"|"paused"|"stopped")}}\n'
+  +'delete_student{studentId}\n'
+  +'add_class{name,subject?,days:[int: 1=Mon..6=Sat,0=Sun],start:"HH:MM",end:"HH:MM",startDate?"YYYY-MM-DD",endDate?,studentIds?:[]}\n'
+  +'edit_class{classId,set:{name?,subject?,days?,start?,end?,startDate?,endDate?}}\n'
+  +'delete_class{classId}\n'
+  +'assign_students{classId,studentIds:[]}\n'
+  +'record_payment{studentId,amount:int VND,month:"YYYY-MM",method?,note?}\n'
+  +'add_score{studentId,title,score:0..10,date?,note?}\n'
+  +'add_lesson{title,classId?,content?,homework?,date?}\n'
+  +'take_attendance{classId,date:"YYYY-MM-DD"}\n'
+  +'navigate{page:"dash"|"students"|"classes"|"tkb"|"att"|"fees"|"scores"|"lessons"|"contact"|"settings"|"guide"}\n'
+  +'Rules: answer data questions directly from CONTEXT (fees, schedule, students) with actions:[]. '
+  +'For any create/edit/delete request, put it in actions (the app shows a confirm card; do not claim it is done yet — say you have prepared it). '
+  +'If the request is ambiguous or a name matches nothing, ask back in "reply" with actions:[]. '
+  +'Money: "180k"=180000, "1tr2"=1200000. Weeks: T2=Mon..T7=Sat, CN=Sun.\n'
+  +'CONTEXT='+aiCtx();
+}
+async function aiLLM(userText){
+  const key=(DB.settings.geminiKey||'').trim();
+  let cached='';try{cached=localStorage.getItem('tedu_ai_model')||'';}catch(e){}
+  const models=(cached?[cached]:[]).concat(AI_MODELS.filter(function(m){return m!==cached;}));
+  const sys=aiSysPrompt();
+  const contents=AI_HIST.slice(-8).map(function(h){return{role:h.role,parts:[{text:h.text}]};});
+  contents.push({role:'user',parts:[{text:userText}]});
+  let lastErr='';
+  for(let i=0;i<models.length;i++){
+    const mdl=models[i];
+    let res;
+    try{
+      res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+mdl+':generateContent?key='+encodeURIComponent(key),{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({system_instruction:{parts:[{text:sys}]},contents:contents,generationConfig:{temperature:0.2,responseMimeType:'application/json'}})
+      });
+    }catch(e){throw new Error('Không gọi được Gemini — kiểm tra kết nối mạng.');}
+    if(res.ok){
+      try{localStorage.setItem('tedu_ai_model',mdl);}catch(e){}
+      const j=await res.json();
+      const cand=(j.candidates||[])[0];
+      const txt=cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(p){return p.text||'';}).join(''):'';
+      if(!txt)throw new Error('Gemini trả về rỗng — thử lại nhé.');
+      return txt;
+    }
+    const t=await res.text();
+    if(res.status===404&&i<models.length-1){lastErr=t;continue;}
+    if(res.status===400&&/API key not valid|API_KEY_INVALID/i.test(t))throw new Error('Khoá API không hợp lệ — kiểm tra lại trong Cài đặt.');
+    if(res.status===429)throw new Error('Hết lượt miễn phí tạm thời (429) — đợi một lát rồi thử lại.');
+    if(i===models.length-1)throw new Error('Gemini lỗi '+res.status+'. '+t.slice(0,160));
+    lastErr=t;
+  }
+  throw new Error('Không gọi được mô hình nào. '+lastErr.slice(0,120));
+}
+async function aiTestKey(btn){
+  const key=(DB.settings.geminiKey||'').trim();
+  if(!key){toast('Dán khoá API vào ô trước đã nhé');return;}
+  const old=btn.textContent;btn.textContent='Đang kiểm tra...';btn.disabled=true;
+  try{const r=await aiLLM('Say only: {"reply":"ok","actions":[]}');toast('Kết nối Gemini thành công ✓');}
+  catch(e){toast('Lỗi: '+(e.message||e));}
+  btn.textContent=old;btn.disabled=false;
+}
+
 /* ========== ĐA NGÔN NGỮ (VI / EN / KO) ========== */
 let LANG='vi'; try{LANG=localStorage.getItem('tedu_lang')||'vi';}catch(e){}
 const I18N={
+"Chào bạn! Tôi là thư ký của tiệm. Tôi làm được:":["Hello! I'm the shop's clerk. I can:","안녕하세요! 저는 이 상점의 서기입니다. 할 수 있는 일:"],
+"Thêm / sửa / xoá":["Add / edit / delete","추가 / 수정 / 삭제"],
+"học sinh, ca học —":["students and classes —","학생·수업 —"],
+"\"thêm học sinh Lan lớp 8A môn Văn giá 160k\"":["\"add student Lan class 8A Literature 160k\"","\"학생 추가: Lan, 8A, 문학, 160k\""],
+"thu học phí":["collect tuition","수업료 수금"],
+"thêm điểm":["add scores","점수 추가"],
+"\"thu Minh Anh 500k\", \"cho Gia Bảo 8 điểm\"":["\"collect Minh Anh 500k\", \"give Gia Bảo a score of 8\"","\"Minh Anh 500k 수금\", \"Gia Bảo 8점\""],
+"đúng buổi —":["for the right session —","정확한 수업 회차로 —"],
+"\"điểm danh Toán 9 hôm nay\"":["\"attendance Math 9 today\"","\"오늘 수학 9 출석\""],
+"Trả lời số liệu":["Answer from your data","데이터 기반 답변"],
+"\"ai chưa đóng tiền?\", \"hôm nay dạy gì?\"":["\"who hasn't paid?\", \"what's on today?\"","\"미납자는?\", \"오늘 수업은?\""],
+"Mọi lệnh ghi sổ tôi đều đưa":["Every write command gets a","모든 기록 명령에는"],
+"thẻ xác nhận":["confirmation card","확인 카드"],
+"trước — bấm":["first — press","가 먼저 표시됩니다 — 버튼"],
+"mới ghi thật.":["to actually write it.","을 눌러야 실제로 기록됩니다."],
+"Chế độ cơ bản":["Basic mode","기본 모드"],
+"Chưa có khoá Gemini — hiểu các lệnh mẫu. Dán khoá miễn phí ở":["No Gemini key yet — template commands only. Paste a free key in","Gemini 키가 없습니다 — 기본 명령만 이해합니다. 무료 키를 붙여넣기:"],
+"để trò chuyện tự nhiên.":["for natural conversation.","→ 자연스러운 대화 가능."],
+"Đang nối AI Gemini — hỏi gì cũng được. Trợ lý luôn xin xác nhận trước khi ghi sổ.":["Gemini connected — ask anything. The assistant always confirms before writing.","Gemini 연결됨 — 무엇이든 물어보세요. 기록 전 항상 확인합니다."],
+"Lấy khoá miễn phí ~1 phút tại":["Get a free key in ~1 minute at","무료 키 받기 (~1분):"],
+"→ Create API key → dán vào đây. Có khoá, mục":["→ Create API key → paste here. With a key, the","→ Create API key → 여기에 붙여넣기. 키가 있으면"],
+"trò chuyện tự nhiên và giải đáp mọi thắc mắc; không có khoá vẫn dùng được bộ lệnh cơ bản.":["page chats naturally and answers anything; without one, template commands still work.","페이지가 자연스럽게 대화하고 모든 질문에 답합니다. 키가 없어도 기본 명령은 사용 가능."],
+"Mục":["The","메뉴"],
+"là thư ký của tiệm: gõ lệnh bằng lời thường —":["page is the shop's clerk: type commands in plain words —","는 상점의 서기입니다. 평범한 말로 지시하세요 —"],
+"\"ai chưa đóng tiền?\"":["\"who hasn't paid?\"","\"미납자는 누구?\""],
+"Mọi lệnh ghi sổ đều hiện":["Every write command shows a","모든 기록 명령에는"],
+"— bấm":["— press","가 표시됩니다 — 버튼"],
+"mới ghi thật, bấm":["to actually write, press","을 눌러야 기록되며,"],
+"là bỏ. Không lo trợ lý hiểu nhầm.":["to discard. No accidental changes.","를 누르면 취소됩니다. 오해로 인한 실수 걱정 없음."],
+"Muốn trợ lý":["Want the assistant to","비서가"],
+"hiểu mọi kiểu nói và tán gẫu giải đáp":["understand any phrasing and chat freely","모든 표현을 이해하고 자유롭게 대화"],
+": lấy khoá Gemini miễn phí tại":[": get a free Gemini key at","하길 원한다면: 무료 Gemini 키 받기:"],
+"rồi dán vào":["then paste it into","→ 붙여넣기:"],
+"Cài đặt → Trợ lý AI":["Settings → AI Assistant","설정 → AI 비서"],
+". Không có khoá vẫn dùng được bộ lệnh mẫu.":[". Template commands work without a key.",". 키가 없어도 기본 명령은 사용 가능합니다."],
+"Trợ lý đọc được số liệu thật của sổ (lịch hôm nay, học phí tháng, hồ sơ từng em) nên hỏi gì về sổ cũng trả lời được.":["The assistant reads your real ledger (today's schedule, monthly tuition, each profile), so it can answer anything about it.","비서는 실제 장부(오늘 일정, 월 수업료, 학생 프로필)를 읽으므로 장부에 관한 무엇이든 답할 수 있습니다."],"Trợ lý AI":["AI Assistant","AI 비서"],
+"Ra lệnh bằng lời — trợ lý ghi sổ giúp bạn, luôn hỏi xác nhận trước khi làm":["Give commands in plain words — the assistant keeps the ledger for you, always confirming first","말로 지시하세요 — 비서가 장부를 대신 기록하며, 항상 먼저 확인합니다"],
+"Hỏi hoặc ra lệnh... (VD: thu Minh Anh 500k · điểm danh Toán 9 hôm nay)":["Ask or command... (e.g. collect Minh Anh 500k · attendance Math 9 today)","질문하거나 지시하세요... (예: Minh Anh 500k 수금)"],
+"Gửi cho trợ lý (Enter)":["Send to the assistant (Enter)","비서에게 보내기 (Enter)"],
+"Hôm nay dạy gì?":["What's on today?","오늘 수업은?"],
+"Ai chưa đóng tiền?":["Who hasn't paid?","미납자는 누구?"],
+"Tổng thu tháng này":["This month's total","이번 달 수금 합계"],
+"Thêm học sinh Trần Văn An lớp 7A2 môn Toán giá 170k":["Add student Tran Van An class 7A2 Math 170k","학생 추가: Trần Văn An, 7A2, 수학, 170k"],
+"Trợ lý làm được gì?":["What can you do?","무엇을 할 수 있나요?"],
+"Thực hiện":["Confirm","실행"],
+"Đã thực hiện":["Done","완료됨"],
+"Đã huỷ":["Cancelled","취소됨"],
+"Ghi vào sổ":["Write it into the ledger","장부에 기록"],
+"Thêm điểm kiểm tra":["Add test score","시험 점수 추가"],
+"Ghi nhận thu học phí":["Record tuition payment","수업료 수금 기록"],
+"Gán học sinh vào ca":["Assign students to class","학생을 수업에 배정"],
+"Tạo ca học":["Create class","수업 만들기"],
+"Sửa ca học":["Edit class","수업 수정"],
+"Mở điểm danh":["Open attendance","출석 열기"],
+"Mở trang":["Open page","페이지 열기"],
+"Tên":["Name","이름"],
+"Nội dung":["Content","내용"],
+"Trang":["Page","페이지"],
+"Hồ sơ đầy đủ":["Full profile","전체 프로필"],
+"Trợ lý AI (Gemini)":["AI Assistant (Gemini)","AI 비서 (Gemini)"],
+"Khoá API Gemini (miễn phí)":["Gemini API key (free)","Gemini API 키 (무료)"],
+"Khoá chỉ lưu trong sổ của bạn":["The key is stored only in your ledger","키는 내 장부에만 저장됩니다"],
+"Kiểm tra kết nối":["Test connection","연결 테스트"],
+"Gửi câu chào thử tới Gemini":["Send a test hello to Gemini","Gemini에 테스트 전송"],
+"Đang kiểm tra...":["Testing...","테스트 중..."],
+"Kết nối Gemini thành công ✓":["Gemini connected ✓","Gemini 연결 성공 ✓"],
+"Dán khoá API vào ô trước đã nhé":["Paste your API key first","먼저 API 키를 붙여넣으세요"],
+"Mở Trợ lý AI":["Open AI Assistant","AI 비서 열기"],
+"11. Trợ lý AI":["11. AI Assistant","11. AI 비서"],
 "Xoá dữ liệu demo và quay về đăng nhập":["Wipe demo data and return to sign-in","데모 데이터를 지우고 로그인으로"],
 "Mở trang Quản trị":["Open the Admin page","관리자 페이지 열기"],
 "Bấm":["Click","클릭:"],
