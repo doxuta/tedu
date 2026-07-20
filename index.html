@@ -698,7 +698,7 @@ const STATUS_BD={active:'bd-grn',paused:'bd-amb',stopped:'bd-gray'};
 
 function fixup(d){
   d=d||{};
-  d.settings=Object.assign({name:'TEdu',defaultRate:150000,chargeUnexcused:false,bankInfo:'',bankId:'',bankAcc:'',bankHolder:'',qrImage:'',geminiKey:'',holidayTheme:true,birthday:''},d.settings||{});
+  d.settings=Object.assign({name:'TEdu',defaultRate:150000,chargeUnexcused:false,bankInfo:'',bankId:'',bankAcc:'',bankHolder:'',qrImage:'',geminiKey:'',holidayTheme:true},d.settings||{});
   d.students=d.students||[]; d.classes=d.classes||[]; d.attendance=d.attendance||[];
   d.classes.forEach(function(c){if(c.startDate===undefined)c.startDate='';if(c.endDate===undefined)c.endDate='';});
   d.payments=d.payments||[]; d.scores=d.scores||[]; d.lessons=d.lessons||[]; d.meta=d.meta||{}; d.slipNotes=d.slipNotes||{}; d.docs=d.docs||[];
@@ -2919,8 +2919,6 @@ function renderSettings(){
     +'<div><label class="lb">Đơn giá mặc định / buổi (đ)</label><input class="inp" type="number" step="10000" min="0" value="'+(+st.defaultRate||0)+'" onchange="setS(\'defaultRate\',+this.value||0)"></div>'
     +'<div class="full"><label class="flex" style="cursor:pointer;gap:8px"><input type="checkbox" '+(st.chargeUnexcused?'checked':'')+' onchange="setS(\'chargeUnexcused\',this.checked);rerender()"> <span><b>Tính phí cả buổi vắng không phép</b> <span class="muted small">— bật nếu bạn vẫn thu tiền buổi vắng KP</span></span></label></div>'
   +'<div class="full"><label class="flex" style="cursor:pointer;gap:8px"><input type="checkbox" '+(st.holidayTheme!==false?'checked':'')+' onchange="setS(\'holidayTheme\',this.checked);applyFestive()"> <span><b>Theme ngày lễ tự động</b> <span class="muted small">— Tết cả tháng 🧧 · Trung thu cả tuần 🏮 · 20/11 · Noel · 2/9 · Giỗ Tổ… mỗi lễ một bản sắc riêng</span></span></label></div>'
-  +'<div class="fg mt"><div><label class="lb">Sinh nhật của bạn 🎂</label><input class="inp" type="date" value="'+H(st.birthday||'')+'" data-tip="Đến ngày này mỗi năm, web tự trang trí + gửi thiệp chúc mừng bạn" onchange="setS(\'birthday\',this.value);applyFestive()"></div>'
-  +'<div style="display:flex;align-items:flex-end"><button class="btn btn-sm btn-ghost" data-tip="Xem trước thiệp sinh nhật động (có nút phát lại)" onclick="bdayPreview()">💌 Xem thử thiệp</button></div></div>'
     +'</div></div>';
   html+='<div class="card"><h3>'+ic('credit-card')+' Thanh toán &amp; phiếu học phí</h3><div class="fg">'
     +'<div><label class="lb">Mã ngân hàng</label><input class="inp" value="'+H(st.bankId)+'" placeholder="VD: BIDV, VCB, TCB, MB, ACB" onchange="setS(\'bankId\',this.value.trim())"></div>'
@@ -5317,17 +5315,14 @@ const BDAY_CAKE_ART='<svg viewBox="0 0 240 190" xmlns="http://www.w3.org/2000/sv
  +'<ellipse cx="105.5" cy="61" rx="3.4" ry="5" fill="#F3A33C"/><ellipse cx="120.5" cy="55" rx="3.4" ry="5" fill="#F3A33C"/><ellipse cx="135.5" cy="61" rx="3.4" ry="5" fill="#F3A33C"/>'
  +'<text x="120" y="176" text-anchor="middle" font-family="Dancing Script, cursive" font-size="15" fill="#93392C">Happy Birthday!</text>'
  +'</svg>';
+/* Theme sinh nhật là đặc quyền riêng của tài khoản Diễm Quỳnh */
 function isQuynh(){
   try{
-    const n=deAccent((((window.FB&&FB.user&&FB.user.displayName)||'')+' '+(DB.settings.name||''))).toLowerCase();
-    return n.indexOf('diem quynh')>=0;
+    const u=(typeof FB!=='undefined'&&FB&&FB.user)?FB.user:null;
+    return String((u&&u.email)||'').toLowerCase().trim()==='diemquynh.le.vtp@gmail.com';
   }catch(e){return false;}
 }
-function bdayDateOf(){
-  if(DB.settings.birthday)return DB.settings.birthday;
-  if(isQuynh())return '2002-05-28';
-  return '';
-}
+function bdayDateOf(){return isQuynh()?'2002-05-28':'';}
 function bdayName(){return isQuynh()?'Diễm Quỳnh':(DB.settings.name||'bạn');}
 function applyBirthday(dateOpt){
   const bd=bdayDateOf(); if(!bd)return false;
@@ -5391,11 +5386,6 @@ function bdayReplay(){
 function bdayClose(y){
   try{localStorage.setItem('tedu_bday_'+y,'1');}catch(e){}
   const e=document.getElementById('bdayCard'); if(e)e.remove();
-}
-function bdayPreview(){
-  const bd=bdayDateOf();
-  if(!bd){toast('Nhập ngày sinh của bạn trước đã nhé 🎂');return;}
-  bdayOpenCard(todayStr().slice(0,4)+'-'+bd.slice(5),true);
 }
 /* Dọn sạch + áp lại toàn bộ trang trí (sinh nhật ưu tiên hơn lễ) */
 function holClear(){
