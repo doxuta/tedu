@@ -111,6 +111,12 @@ button,.btn,.chip,.att-btn,.nav-item,a{touch-action:manipulation;-webkit-tap-hig
 .logo-badge{position:relative;width:44px;height:44px;border:1.5px solid var(--gold);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;background:linear-gradient(160deg,rgba(176,141,63,.22),rgba(176,141,63,.04));font-family:'Playfair Display',serif;font-weight:800;font-size:22px;color:var(--cream);line-height:1;box-shadow:2px 2px 0 rgba(0,0,0,.3)}
 .logo-badge::before{content:'';position:absolute;inset:3px;border:1px solid rgba(176,141,63,.7)}
 .logo-badge::after{content:'✳';position:absolute;right:2px;top:1px;font-size:8.5px;color:var(--gold);font-family:'Be Vietnam Pro',sans-serif;line-height:1}
+.logo-badge.logo-seal{border:none;background:transparent;box-shadow:none;width:46px;height:46px}
+.logo-badge.logo-seal::before,.logo-badge.logo-seal::after{display:none}
+.logo-badge.logo-seal svg{width:100%;height:100%;display:block;filter:drop-shadow(2px 2px 0 rgba(0,0,0,.3))}
+.gate-logo.gate-seal{border:none;background:transparent;box-shadow:none;width:64px;height:64px}
+.gate-logo.gate-seal::before{display:none}
+.gate-logo.gate-seal svg{width:100%;height:100%;display:block;filter:drop-shadow(2.5px 2.5px 0 rgba(43,35,24,.25))}
 .logo-name{font-family:'Playfair Display',serif;font-weight:800;font-size:18px;color:var(--cream);line-height:1.25;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .logo-name::after{content:' ✳';font-size:9px;color:var(--gold);vertical-align:.5em;letter-spacing:0}
 .logo-sub{font-size:7.8px;font-weight:700;letter-spacing:.13em;color:#8d8371;line-height:1.5;text-transform:uppercase;white-space:nowrap}
@@ -646,7 +652,7 @@ body.th-bday .pt{color:#A34C55}
   <aside class="sidebar">
     <div class="grain-dark" style="opacity:.28"></div>
     <div class="logo">
-      <span class="logo-badge">T</span>
+      <span class="logo-badge logo-seal"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="20.5" fill="#221B12" stroke="#B08D3F" stroke-width="1.6"/><circle cx="22" cy="22" r="16.3" fill="none" stroke="#B08D3F" stroke-width=".8" stroke-dasharray="2.5 2.5" opacity=".85"/><text x="22" y="27" text-anchor="middle" font-family="Playfair Display,serif" font-weight="800" font-size="14.5" fill="#EFE6CF" letter-spacing=".5">TE</text><text x="22" y="12.6" text-anchor="middle" font-size="6.2" fill="#C9A227">✳</text><circle cx="8.3" cy="22" r=".9" fill="#B08D3F"/><circle cx="35.7" cy="22" r=".9" fill="#B08D3F"/></svg></span>
       <div style="min-width:0"><div class="logo-name" id="brandName">TEdu</div><div class="logo-sub">Est. 2026 · Sổ dạy học</div></div>
     </div>
     <nav>
@@ -674,8 +680,7 @@ body.th-bday .pt{color:#A34C55}
       <div id="userChip"></div>
       <a onclick="exportJSON()" data-tip="Tải file sao lưu JSON về máy"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>Sao lưu dữ liệu</a>
       <a onclick="showLanding()" data-tip="Xem lại trang giới thiệu"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>Trang giới thiệu</a>
-      <a onclick="openFeedback()" data-tip="Nhắn trực tiếp cho quản trị viên — góp ý, báo lỗi, cần hỗ trợ">💬 Liên hệ admin <span id="fbDot" style="display:none;width:7px;height:7px;border-radius:50%;background:#C85C4E;margin-left:2px"></span></a>
-      <span>Sổ ghi chép cẩn thận</span>
+      <a onclick="openFeedback()" data-tip="Nhắn trực tiếp cho quản trị viên — góp ý, báo lỗi, cần hỗ trợ"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></svg>Liên hệ admin <span id="fbDot" style="display:none;width:7px;height:7px;border-radius:50%;background:#C85C4E;margin-left:2px"></span></a>
       <div class="side-credit"><span class="logo-mini">T</span>By <b>Matthew Doan</b> — TEducation<br>Est. 2026 · © All rights reserved</div>
     </div>
   </aside>
@@ -3346,9 +3351,9 @@ function showGate(kind,extra){
   if(!kind){root.innerHTML='';return;}
   let inner='';
   if(kind==='loading'){
-    inner='<div class="gate-logo">T<sup style="font-size:11px;color:var(--gold)">✳</sup></div><div class="gate-title">Đang mở sổ...</div><div class="gate-sub">Kiểm tra phiên đăng nhập</div>';
+    inner='<div class="gate-logo gate-seal"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="20.5" fill="#221B12" stroke="#B08D3F" stroke-width="1.6"/><circle cx="22" cy="22" r="16.3" fill="none" stroke="#B08D3F" stroke-width=".8" stroke-dasharray="2.5 2.5" opacity=".85"/><text x="22" y="27" text-anchor="middle" font-family="Playfair Display,serif" font-weight="800" font-size="14.5" fill="#EFE6CF" letter-spacing=".5">TE</text><text x="22" y="12.6" text-anchor="middle" font-size="6.2" fill="#C9A227">✳</text><circle cx="8.3" cy="22" r=".9" fill="#B08D3F"/><circle cx="35.7" cy="22" r=".9" fill="#B08D3F"/></svg></div><div class="gate-title">Đang mở sổ...</div><div class="gate-sub">Kiểm tra phiên đăng nhập</div>';
   }else if(kind==='login'){
-    inner='<div class="gate-logo">T<sup style="font-size:11px;color:var(--gold)">✳</sup></div>'
+    inner='<div class="gate-logo gate-seal"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="20.5" fill="#221B12" stroke="#B08D3F" stroke-width="1.6"/><circle cx="22" cy="22" r="16.3" fill="none" stroke="#B08D3F" stroke-width=".8" stroke-dasharray="2.5 2.5" opacity=".85"/><text x="22" y="27" text-anchor="middle" font-family="Playfair Display,serif" font-weight="800" font-size="14.5" fill="#EFE6CF" letter-spacing=".5">TE</text><text x="22" y="12.6" text-anchor="middle" font-size="6.2" fill="#C9A227">✳</text><circle cx="8.3" cy="22" r=".9" fill="#B08D3F"/><circle cx="35.7" cy="22" r=".9" fill="#B08D3F"/></svg></div>'
       +'<div class="gate-title">Đăng nhập TEdu</div>'
       +'<div class="gate-script">sổ tay của người thầy tận tâm</div>'
       +'<div class="gate-sub">Dữ liệu đồng bộ theo tài khoản Google — đổi máy vẫn còn nguyên.</div>'
@@ -5375,10 +5380,13 @@ function i18nInit(){
     cur=el;
     if(!el){tip.classList.remove('show');return;}
     tip.textContent=el.getAttribute('data-tip');
-    const r=el.getBoundingClientRect();
-    tip.style.left=Math.max(60,Math.min(window.innerWidth-60,r.left+r.width/2))+'px';
-    tip.style.top=Math.max(30,r.top-4)+'px';
     tip.classList.add('show');
+    const r=el.getBoundingClientRect();
+    const tw=tip.offsetWidth||0, th=tip.offsetHeight||0;
+    let lx=r.left+r.width/2;
+    lx=Math.max(tw/2+8,Math.min(window.innerWidth-tw/2-8,lx));
+    tip.style.left=lx+'px';
+    tip.style.top=Math.max(th+12,r.top-4)+'px';
   });
   document.addEventListener('scroll',hide,true);
   document.addEventListener('click',function(){setTimeout(hide,150);});
