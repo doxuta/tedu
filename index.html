@@ -402,6 +402,7 @@ input[type=date].inp,input[type=month].inp,input[type=time].inp{padding:8px 10px
 .fee-chip.inv{border-color:#C8922A;background:#C8922A1c;color:#8a6015}
 .fee-chip.col{border-color:#2F5D50;background:#2F5D5019;color:#2F5D50;text-decoration:line-through;text-decoration-thickness:1px;text-decoration-color:#2F5D5088}
 .fee-chip.demo{width:34px;height:22px;pointer-events:none;vertical-align:middle;margin-right:4px}
+.fee-chip.orp{border-style:dashed;border-color:#93392C;color:#93392C;background:#93392C0d}
 .ink-amb{color:#C8922A}
 /* ===== TRỢ LÝ AI ===== */
 .ai-card{padding:0;overflow:hidden}
@@ -684,6 +685,7 @@ function fixup(d){
     d.meta.payMigrated=true;
   }
   d.lessons.forEach(function(l){if(!Array.isArray(l.docIds))l.docIds=[];});
+  d.makeups=Array.isArray(d.makeups)?d.makeups:[];
   return d;
 }
 let DB=fixup(null);
@@ -771,7 +773,6 @@ function countBillable(sid,month){
   return attOfStudentMonth(sid,month).filter(r=>bs.includes(r.status)).length;
 }
 function monthFee(sid,month){const s=studentById(sid);if(!s)return 0;return countBillable(sid,month)*(+s.rate||0);}
-function monthPaid(sid,month){return DB.payments.filter(p=>p.studentId===sid&&p.month===month).reduce((t,p)=>t+(+p.amount||0),0);}
 
 /* ===== MÔ HÌNH TÍNH TIỀN THEO BUỔI =====
    Mỗi buổi billable (có mặt/muộn[/vắng KP nếu bật]) hoặc CHƯA THANH TOÁN,
@@ -804,10 +805,19 @@ function invoiceMapOf(sid){
 /* Mọi buổi billable kèm trạng thái: 'none' (chưa lập phiếu) | 'invoiced' (chờ thu) | 'collected' (đã thu) */
 function sessionStatesOf(sid){
   const inv=invoiceMapOf(sid);
-  return billableSessionsOf(sid).map(x=>{
+  const seen=new Set();
+  const out=billableSessionsOf(sid).map(x=>{
+    seen.add(x.key);
     const p=inv.get(x.key)||null;
     return {...x,invoice:p,state:p?(p.paid?'collected':'invoiced'):'none'};
   });
+  /* Buổi nằm trên phiếu nhưng đã bị sửa điểm danh thành không tính phí — vẫn hiện, kèm cảnh báo */
+  inv.forEach((p,k)=>{
+    if(seen.has(k))return;
+    const parts=k.split('|');
+    out.push({key:k,date:parts[0],classId:parts[1],status:'gone',invoice:p,state:p.paid?'collected':'invoiced',orphan:true});
+  });
+  return out.sort((a,b)=>a.date.localeCompare(b.date));
 }
 function uninvoicedOf(sid){return sessionStatesOf(sid).filter(x=>x.state==='none');}
 /* Nợ thực tế = mọi buổi CHƯA THU TIỀN (chưa lập phiếu + phiếu chờ thu) */
@@ -970,6 +980,17 @@ function renderDash(){
     if(owedList.length>6)html+='<div class="right mt"><a onclick="nav(\'fees\')">Xem tất cả ('+owedList.length+') →</a></div>';
   }
   html+='</div></div>';
+  const mkP=mkPending();
+  if(mkP.length){
+    html+='<div class="card"><h3>'+ic('clock')+' Buổi chờ dạy bù ('+mkP.length+')</h3>';
+    mkP.slice(0,6).forEach(x=>{
+      const sm=studentById(x.sid), cm=classById(x.classId);
+      html+='<div class="list-item"><div class="stu-cell">'+avatar(sm,'av-sm')+'<div><div class="nm" onclick="openProfile(\''+sm.id+'\')">'+H(sm.name)+'</div><div class="sub">vắng '+fmtD(x.date)+(cm?' · '+H(cm.name):'')+'</div></div></div>'
+        +'<button class="btn btn-xs btn-grn" data-tip="Đã dạy bù xong buổi này" onclick="mkDone(\''+x.id+'\',true)">✓ Đã bù</button></div>';
+    });
+    if(mkP.length>6)html+='<div class="muted small mt">… và '+(mkP.length-6)+' buổi nữa — xem trong hồ sơ từng em.</div>';
+    html+='</div>';
+  }
   // Điểm KT gần đây
   const recentScores=[...DB.scores].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
   if(recentScores.length){
@@ -1294,12 +1315,25 @@ function openProfile(id){
     +'<div class="k">Phiếu gần nhất</div><div>'+(lastPay?fmtD(lastPay.paidAt)+' · '+(lastPay.sessions||(lastPay.sessionKeys||[]).length)+' buổi · '+fmtM(lastPay.amount)+' '+(lastPay.paid?'<span class="bd bd-grn">Đã thu</span>':'<span class="bd bd-amb">Chờ thu</span>'):'—')+'</div>'
     +(outL.length?'<div class="k"></div><div><button class="btn btn-xs btn-grn" onclick="closeModal(true);feeOpen.add(\''+id+'\');nav(\'fees\')">'+ic('check')+' Mở lưới buổi</button></div>':'')
     +'</div></div>';
+  const mks=(DB.makeups||[]).filter(x=>x.sid===id).sort((a,b)=>b.date.localeCompare(a.date));
+  if(mks.length){
+    html+='<div class="card" style="box-shadow:none;margin-bottom:10px"><h3>'+ic('clock')+' Buổi dạy bù</h3>';
+    mks.forEach(x=>{const cm=classById(x.classId);
+      html+='<div class="list-item"><div class="small">Vắng '+fmtD(x.date)+(cm?' · '+H(cm.name):'')+'</div>'
+        +'<div class="flex">'+(x.status==='done'
+          ?'<span class="bd bd-grn">Đã bù '+(x.doneDate?fmtDShort(x.doneDate):'')+'</span><button class="btn btn-xs btn-ghost" data-tip="Chuyển lại chờ bù" onclick="mkDone(\''+x.id+'\',false)">↺</button>'
+          :'<span class="bd bd-amb">Chờ bù</span><button class="btn btn-xs btn-grn" data-tip="Đã dạy bù xong" onclick="mkDone(\''+x.id+'\',true)">✓</button>')
+        +'<button class="btn btn-xs btn-ghost" data-tip="Xoá ghi nhớ này" onclick="mkDel(\''+x.id+'\')">'+ic('trash')+'</button></div></div>';
+    });
+    html+='</div>';
+  }
   if(scores.length){
     html+='<div class="card" style="box-shadow:none;margin-bottom:10px"><h3>'+ic('bar-chart')+' Điểm kiểm tra gần đây</h3>';
     scores.slice(0,4).forEach(sc=>{html+='<div class="list-item"><div>'+H(sc.title)+' <span class="muted small">· '+fmtD(sc.date)+'</span></div><span class="bd score-bd '+scoreBadge(sc.score)+'">'+H(sc.score)+'</span></div>';});
     html+='</div>';
   }
-  html+='<div class="m-foot"><button class="btn btn-ghost" data-tip="3 mẫu tin soạn sẵn: nhắc phí · báo cáo · báo nghỉ" onclick="openMsgTemplates(\''+id+'\')">'+ic('message')+' Mẫu tin nhắn</button>'
+  html+='<div class="m-foot"><button class="btn btn-ghost" data-tip="Tổng hợp chuyên cần + điểm + học phí 30 ngày thành nhận xét gửi phụ huynh" onclick="openProgressReport(\''+id+'\')">✍ Nhận xét</button>'
+    +'<button class="btn btn-ghost" data-tip="4 mẫu tin soạn sẵn: nhắc phí · báo cáo · nhận xét · báo nghỉ" onclick="openMsgTemplates(\''+id+'\')">'+ic('message')+' Mẫu tin nhắn</button>'
     +'<button class="btn btn-ghost" data-tip="Sửa hồ sơ học sinh" onclick="closeModal();openStudentForm(\''+id+'\')">'+ic('pencil')+' Sửa</button>'
     +'<button class="btn btn-pri" onclick="closeModal()">Đóng</button></div>';
   openModal(html);
@@ -1498,9 +1532,8 @@ function classCardToggle(id){
 }
 function classCardHTML(c){
   const r=classRecapData(c),cst=classStatusInfo(c);
-  let feeAll=0,paidAll=0;
-  r.students.forEach(x=>{feeAll+=x.feeAll;paidAll+=x.paidAll;});
-  const payBd=feeAll<=0?'<span class="bd bd-gray">Chưa phát sinh</span>':(paidAll>=feeAll?'<span class="bd bd-grn">Đã thu đủ</span>':(paidAll>0?'<span class="bd bd-amb">Thu một phần</span>':'<span class="bd bd-red">Chưa thu</span>'));
+  const unpN=r.students.reduce((t,x)=>t+x.unpaid,0),unpM=r.students.reduce((t,x)=>t+x.unpaidMoney,0);
+  const payBd=r.revenue<=0?'<span class="bd bd-gray">Chưa phát sinh</span>':(unpN<=0?'<span class="bd bd-grn">Đã thu hết</span>':'<span class="bd bd-red">Còn '+unpN+' buổi chưa thu</span>');
   const recs=DB.attendance.filter(a=>a.classId===c.id).sort((a,b)=>a.date.localeCompare(b.date));
   let h='<div class="card">';
   h+='<div class="spread"><div class="flex" style="gap:11px"><span class="tag" style="background:'+c.color+'14;color:'+c.color+'">●</span>'
@@ -1514,7 +1547,7 @@ function classCardHTML(c){
     +'<span><b>'+r.students.length+'</b> học sinh</span>'
     +'<span><b>'+r.sessions+'</b> buổi đã dạy</span>'
     +'<span>Phát sinh <b>'+fmtM(r.revenue)+'</b></span>'
-    +'<span>Đã thu <b style="color:'+(feeAll>0&&paidAll>=feeAll?'var(--grn)':'var(--rust)')+'">'+fmtM(paidAll)+'</b> / '+fmtM(feeAll)+'</span>'
+    +'<span>Chưa thu <b style="color:'+(unpN>0?'var(--rust)':'var(--grn)')+'">'+(unpN>0?unpN+' buổi · '+fmtM(unpM):'0\u00A0₫')+'</b></span>'
     +payBd+'</div>';
   h+='<div class="ccb" id="ccb_'+c.id+'">';
   h+='<div class="cls-sec-label">Các buổi đã dạy ('+recs.length+')</div>';
@@ -1530,16 +1563,14 @@ function classCardHTML(c){
   h+='<div class="cls-sec-label">Học sinh &amp; học phí</div>';
   if(!r.students.length)h+='<div class="muted small">Chưa có học sinh trong ca.</div>';
   else{
-    h+='<div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Học sinh</th><th class="num">Buổi (ca này)</th><th class="num">Thành tiền</th><th class="num">Phí các tháng*</th><th class="num">Đã thu</th><th>Trạng thái</th></tr></thead><tbody>';
+    h+='<div class="tbl-wrap"><table class="tbl" style="min-width:560px"><thead><tr><th>Học sinh</th><th class="num">Buổi (ca này)</th><th class="num">Thành tiền</th><th class="num">Chưa thu*</th><th>Trạng thái</th></tr></thead><tbody>';
     r.students.forEach(x=>{
-      const ok=x.paidAll>=x.feeAll&&x.feeAll>0;
       h+='<tr><td><div class="stu-cell">'+avatar(x.s,'av-sm')+'<span class="nm" onclick="openProfile(\''+x.s.id+'\')">'+H(x.s.name)+'</span></div></td>'
         +'<td class="num">'+x.n+'</td><td class="num"><b>'+fmtM(x.money)+'</b></td>'
-        +'<td class="num">'+fmtM(x.feeAll)+'</td>'
-        +'<td class="num" style="color:'+(ok?'var(--grn)':'var(--rust)')+'">'+fmtM(x.paidAll)+'</td>'
-        +'<td>'+(x.feeAll<=0?'<span class="bd bd-gray">—</span>':(ok?'<span class="bd bd-grn">Đã thu đủ</span>':(x.paidAll>0?'<span class="bd bd-amb">Thu một phần</span>':'<span class="bd bd-red">Chưa thu</span>')))+'</td></tr>';
+        +'<td class="num" style="color:'+(x.unpaid>0?'var(--red)':'var(--grn)')+'">'+(x.unpaid>0?x.unpaid+' buổi · '+fmtM(x.unpaidMoney):'0\u00A0₫')+'</td>'
+        +'<td>'+(x.unpaid<=0?'<span class="bd bd-grn">Đã thu hết</span>':'<span class="bd bd-red">Còn '+x.unpaid+' buổi</span>')+'</td></tr>';
     });
-    h+='</tbody></table></div><div class="hint mt">* Tính trên toàn bộ học phí của em trong các tháng ca hoạt động'+(r.months.length?' ('+r.months.map(monthLabel).join(', ')+')':'')+'. Bấm vào một buổi ở trên để mở lại điểm danh buổi đó.</div>';
+    h+='</tbody></table></div><div class="hint mt">* Tính trên MỌI buổi chưa thu tiền của em (kể cả ca khác). Bấm một buổi ở trên để mở lại điểm danh, bấm tên để mở hồ sơ &amp; lập phiếu.</div>';
   }
   h+='</div></div>';
   return h;
@@ -1653,10 +1684,14 @@ function attSheetHTML(){
     +'<div class="flex"><button class="btn btn-sm btn-ghost" data-tip="Đánh dấu cả lớp có mặt" onclick="attAll(\'present\')">'+ic('check')+' Tất cả có mặt</button></div></div>';
   sids.forEach(sid=>{
     const s=studentById(sid); if(!s)return;
+    const mk=mkOf(sid,sessKey(attDate,attClassId));
     h+='<div class="att-row"><div class="who">'+avatar(s,'av-sm')+'<div><div style="font-weight:600">'+H(s.name)+'</div><div class="muted small">'+H(s.grade||'')+'</div></div></div>'
       +'<div class="att-btns">'
       +attBtn(sid,'present','p','Có mặt')+attBtn(sid,'late','l','Muộn')+attBtn(sid,'excused','e','Vắng CP')+attBtn(sid,'absent','a','Vắng KP')
       +'</div><input class="note-inp" placeholder="Ghi chú..." value="'+H(attNotes[sid]||'')+'" oninput="attNotes[\''+sid+'\']=this.value">'
+      +((attTemp[sid]==='excused'||attTemp[sid]==='absent')?(mk
+        ?'<span class="bd '+(mk.status==='done'?'bd-grn':'bd-amb')+'" style="cursor:pointer;white-space:nowrap" data-tip="'+(mk.status==='done'?'Đã dạy bù '+fmtD(mk.doneDate)+' — bấm để chuyển lại chờ bù':'Đang chờ dạy bù — bấm khi đã dạy xong')+'" onclick="mkDone(\''+mk.id+'\','+(mk.status==='done'?'false':'true')+')">'+(mk.status==='done'?'Đã bù ✓':'Chờ bù')+'</span>'
+        :'<button class="btn btn-xs btn-ghost" style="white-space:nowrap" data-tip="Ghi nhớ buổi vắng này cần dạy bù" onclick="mkAdd(\''+sid+'\')">+ Bù</button>'):'')
       +'</div>';
   });
   h+='<div class="spread mt"><div class="small muted">Có mặt '+cnt.present+' · Muộn '+cnt.late+' · Vắng CP '+cnt.excused+' · Vắng KP '+cnt.absent+'</div>'
@@ -1671,8 +1706,36 @@ function attBtn(sid,st,cls,label){
 }
 function setAttStatus(sid,st){attTemp[sid]=st;renderAtt();}
 function attAll(st){Object.keys(attTemp).forEach(sid=>attTemp[sid]=st);renderAtt();}
+/* ----- Buổi học bù: ghi nhớ buổi vắng cần dạy bù, tick khi đã bù ----- */
+function mkOf(sid,key){return (DB.makeups||[]).find(x=>x.sid===sid&&x.key===key);}
+function mkPending(){return (DB.makeups||[]).filter(x=>x.status==='pending'&&studentById(x.sid)).sort((a,b)=>a.date.localeCompare(b.date));}
+function mkAdd(sid){
+  const key=sessKey(attDate,attClassId);
+  if(mkOf(sid,key)){toast('Buổi này đã có trong danh sách chờ bù');return;}
+  (DB.makeups=DB.makeups||[]).push({id:uid(),sid:sid,key:key,date:attDate,classId:attClassId,status:'pending',doneDate:'',note:''});
+  save();toast('Đã ghi nhớ: cần dạy bù cho '+((studentById(sid)||{}).name||'em này'));renderAtt();
+}
+function mkDone(id,on){
+  const x=(DB.makeups||[]).find(m=>m.id===id); if(!x)return;
+  x.status=on?'done':'pending'; x.doneDate=on?todayStr():'';
+  save();toast(on?'Đã đánh dấu ĐÃ DẠY BÙ ✓':'Chuyển lại chờ bù');rerender();
+  if(document.querySelector('.modal'))openProfile(x.sid);
+}
+function mkDel(id){
+  const x=(DB.makeups||[]).find(m=>m.id===id); if(!x)return;
+  DB.makeups=DB.makeups.filter(m=>m.id!==id);
+  save();toast('Đã xoá ghi nhớ dạy bù');rerender();
+  if(document.querySelector('.modal'))openProfile(x.sid);
+}
 function saveAttendance(){
   if(!attClassId)return;
+  const bsA=billableStatuses(), invKey=sessKey(attDate,attClassId), warn=[];
+  Object.keys(attTemp).forEach(sid=>{
+    if(bsA.includes(attTemp[sid]))return;
+    const pv=invoiceMapOf(sid).get(invKey);
+    if(pv){const sw=studentById(sid);warn.push((sw?sw.name:sid)+(pv.paid?' (phiếu ĐÃ THU)':' (phiếu chờ thu)'));}
+  });
+  if(warn.length&&!confirm('Chú ý: buổi này đã nằm trên PHIẾU HỌC PHÍ của: '+warn.join(', ')+'.\nĐổi sang trạng thái không tính phí sẽ làm phiếu lệch số buổi (ô đó sẽ hiện cảnh báo ⚠ trên lưới Học phí).\nVẫn lưu?'))return;
   const records=Object.keys(attTemp).map(sid=>({studentId:sid,status:attTemp[sid],note:(attNotes[sid]||'').trim()}));
   let rec=findAtt(attDate,attClassId);
   if(rec){rec.records=records;}
@@ -1749,6 +1812,7 @@ function renderFees(){
     +'<span><span class="fee-chip demo inv"></span> Đã lập phiếu, chờ thu — bấm mở phiếu</span>'
     +'<span><span class="fee-chip demo col"></span> Đã thu tiền — bấm mở phiếu</span>'
     +'</div></div>';
+  html+=feeReportHTML();
   if(!rows.length){
     html+='<div class="card mt"><div class="empty"><div class="big">'+ic('credit-card',34)+'</div>Chưa có buổi dạy nào.<br>Buổi xuất hiện ở đây ngay sau khi bạn điểm danh.</div></div>';
   }
@@ -1772,13 +1836,14 @@ function renderFees(){
     if(open){
       html+='<div class="fee-grid mt">';
       r.states.forEach(x=>{
-        const cls=x.state==='collected'?'col':(x.state==='invoiced'?'inv':(sel.has(x.key)?'sel':''));
-        const tip=x.state==='collected'?('Đã thu tiền — phiếu '+fmtD(x.invoice.paidAt)+'. Bấm mở phiếu.')
+        const cls=(x.state==='collected'?'col':(x.state==='invoiced'?'inv':(sel.has(x.key)?'sel':'')))+(x.orphan?' orp':'');
+        const tip=x.orphan?('⚠ Buổi này đã bị sửa điểm danh thành KHÔNG tính phí nhưng vẫn nằm trên phiếu '+fmtD(x.invoice.paidAt)+' — mở phiếu để kiểm tra hoặc huỷ phiếu.')
+          :(x.state==='collected'?('Đã thu tiền — phiếu '+fmtD(x.invoice.paidAt)+'. Bấm mở phiếu.')
           :(x.state==='invoiced'?('Đã lập phiếu '+fmtD(x.invoice.paidAt)+', chờ thu. Bấm mở phiếu.')
-          :'Chưa lập phiếu — bấm để tick chọn');
+          :'Chưa lập phiếu — bấm để tick chọn'));
         const act=x.state==='none'?('feeTick(\''+r.s.id+'\',\''+H(x.key)+'\')'):('openPaymentSlip(\''+x.invoice.id+'\')');
         html+='<span class="fee-chip '+cls+'" data-tip="'+tip+'" onclick="'+act+'">'+fmtDShort(x.date)
-          +(x.status==='late'?'<i>M</i>':(x.status==='absent'?'<i>V</i>':''))+'</span>';
+          +(x.orphan?'<i>!</i>':(x.status==='late'?'<i>M</i>':(x.status==='absent'?'<i>V</i>':'')))+'</span>';
       });
       html+='</div>';
       html+='<div class="spread mt" style="border-top:1px dashed var(--line);padding-top:10px">'
@@ -1795,6 +1860,45 @@ function renderFees(){
   document.getElementById('page-fees').innerHTML=html;
 }
 function feeToggle(sid){ if(feeOpen.has(sid))feeOpen.delete(sid); else feeOpen.add(sid); renderFees(); }
+/* ----- Báo cáo thu nhập theo tháng + xuất CSV ----- */
+let feeRepOpen=false;
+function feeRepToggle(){feeRepOpen=!feeRepOpen;renderFees();}
+function feeReportData(){
+  const rev={},inv={},col={};
+  DB.students.forEach(s=>{const rate=+s.rate||0;billableSessionsOf(s.id).forEach(x=>{const m=x.date.slice(0,7);rev[m]=(rev[m]||0)+rate;});});
+  DB.payments.forEach(pm=>{
+    const mi=(pm.paidAt||'').slice(0,7); if(mi)inv[mi]=(inv[mi]||0)+(+pm.amount||0);
+    if(pm.paid){const mc=(pm.collectedAt||pm.paidAt||'').slice(0,7); if(mc)col[mc]=(col[mc]||0)+(+pm.amount||0);}
+  });
+  const months=[...new Set([].concat(Object.keys(rev),Object.keys(inv),Object.keys(col)))].sort().reverse().slice(0,6);
+  return {months,rev,inv,col};
+}
+function feeReportHTML(){
+  const d=feeReportData();
+  let h='<div class="card mt" style="padding:14px 16px"><div class="spread" style="cursor:pointer" onclick="feeRepToggle()"><b class="small">'+ic('bar-chart')+' Báo cáo thu nhập</b><span class="muted">'+(feeRepOpen?'▾':'▸')+'</span></div>';
+  if(feeRepOpen){
+    if(!d.months.length)h+='<div class="muted small mt">Chưa có dữ liệu — báo cáo hiện ra sau buổi điểm danh đầu tiên.</div>';
+    else{
+      h+='<div class="tbl-wrap mt"><table class="tbl"><thead><tr><th>Tháng</th><th class="num">Phát sinh (dạy)</th><th class="num">Đã lập phiếu</th><th class="num">Đã thu tiền</th></tr></thead><tbody>';
+      d.months.forEach(m=>{h+='<tr><td>'+monthLabel(m)+'</td><td class="num">'+fmtM(d.rev[m]||0)+'</td><td class="num">'+fmtM(d.inv[m]||0)+'</td><td class="num" style="color:var(--grn);font-weight:700">'+fmtM(d.col[m]||0)+'</td></tr>';});
+      h+='</tbody></table></div>';
+      h+='<div class="hint mt">Phát sinh = buổi dạy trong tháng × đơn giá. Đã lập phiếu = tổng phiếu lập trong tháng. Đã thu = tiền thực nhận trong tháng (kể cả nợ tháng trước trả muộn).</div>';
+      h+='<div class="right mt"><button class="btn btn-sm btn-ghost" data-tip="Tải sổ phiếu thu — mở được bằng Excel" onclick="exportPayCSV()">'+ic('save')+' Xuất CSV phiếu thu</button></div>';
+    }
+  }
+  return h+'</div>';
+}
+function exportPayCSV(){
+  const head=['Số phiếu','Học sinh','Số buổi','Các ngày','Số tiền','Tình trạng','Ngày lập','Ngày thu','Hình thức','Ghi chú'];
+  const rows=DB.payments.slice().sort((a,b)=>(a.paidAt||'').localeCompare(b.paidAt||'')).map(pm=>{
+    const s=studentById(pm.studentId);
+    const days=(pm.sessionKeys||[]).map(k=>fmtDShort(k.split('|')[0])).join(' ');
+    return [paySerial(pm),s?s.name:'?',pm.sessions||(pm.sessionKeys||[]).length,days,Math.round(+pm.amount||0),pm.paid?'Đã thu':'Chờ thu',pm.paidAt||'',pm.collectedAt||'',pm.method||'',pm.note||''];
+  });
+  const csv='\uFEFF'+[head,...rows].map(r=>r.map(csvCell).join(';')).join('\r\n');
+  download('tedu-phieu-thu-'+todayStr()+'.csv',csv,'text/csv;charset=utf-8');
+  toast('Đã tải sổ phiếu thu CSV');
+}
 function feeTick(sid,key){
   const set=(feeSel[sid]=feeSel[sid]||new Set());
   if(set.has(key))set.delete(key); else set.add(key);
@@ -1872,6 +1976,7 @@ function openPayHistory(sid){
         +(p.paid
           ?'<button class="btn btn-xs btn-ghost" data-tip="Hoàn tác — chuyển về chờ thu" onclick="markPaid(\''+p.id+'\',false)">↺</button> '
           :'<button class="btn btn-xs btn-grn" data-tip="Phụ huynh đã trả — đánh dấu đã thu tiền" onclick="markPaid(\''+p.id+'\',true)">'+ic('check')+' Đã thu</button> ')
+        +'<button class="btn btn-xs btn-ghost" data-tip="Chép liên kết phiếu — dán Zalo gửi phụ huynh" onclick="shareSlip(\''+p.id+'\')">'+ic('message')+'</button> '
         +'<button class="btn btn-xs btn-ghost" data-tip="Xem / in lại phiếu" onclick="openPaymentSlip(\''+p.id+'\')">'+ic('printer')+'</button> '
         +'<button class="btn btn-xs btn-danger" data-tip="Huỷ phiếu — các buổi trở lại chưa lập phiếu" onclick="cancelPayment(\''+p.id+'\',\''+sid+'\')">'+ic('trash')+'</button></td></tr>';
     });
@@ -1920,11 +2025,77 @@ function msgOff(s){
   return 'Thông báo: Lớp'+(cls.length?' '+cls[0].name:'')+' xin phép NGHỈ buổi ngày ... do ... .\n'
     +'Lịch học bù sẽ được thông báo sau. Mong anh/chị thông cảm!\n– '+(DB.settings.name||'Giáo viên');
 }
+/* ----- Nhận xét tiến bộ: tổng hợp 30 ngày chuyên cần + điểm + học phí ----- */
+function msgProgress(s,days){
+  days=days||30;
+  const cut=addDaysISO(-days);
+  const atts=[]; DB.attendance.forEach(rec=>{ if(rec.date<cut)return;
+    const r=(rec.records||[]).find(x=>x.studentId===s.id); if(r)atts.push({date:rec.date,status:r.status});});
+  const cnt={present:0,late:0,excused:0,absent:0}; atts.forEach(a=>cnt[a.status]!==undefined&&cnt[a.status]++);
+  const scores=DB.scores.filter(x=>x.studentId===s.id&&x.date>=cut).sort((a,b)=>a.date.localeCompare(b.date));
+  const outL=outstandingOf(s.id), owed=outL.length*(+s.rate||0);
+  let t='Kính gửi anh/chị – phụ huynh em '+s.name+'.\n';
+  t+='Trong '+days+' ngày qua em học '+atts.length+' buổi: '+(cnt.present+cnt.late)+' có mặt'+(cnt.late?' ('+cnt.late+' buổi muộn)':'')+(cnt.excused?', '+cnt.excused+' vắng có phép':'')+(cnt.absent?', '+cnt.absent+' vắng không phép':'')+'.\n';
+  if(scores.length){
+    t+='Điểm kiểm tra: '+scores.map(sc=>sc.title+' '+sc.score+'đ').join(' · ')+'.';
+    if(scores.length>=2){
+      const d0=parseFloat(String(scores[0].score).replace(',','.')),d1=parseFloat(String(scores[scores.length-1].score).replace(',','.'));
+      if(!isNaN(d0)&&!isNaN(d1))t+=d1>d0?' Em đang tiến bộ rõ ('+scores[0].score+' → '+scores[scores.length-1].score+') — anh/chị động viên em thêm nhé!':(d1<d0?' Điểm gần đây chững lại ('+scores[0].score+' → '+scores[scores.length-1].score+'), tôi sẽ kèm sát phần em còn yếu.':' Em giữ phong độ ổn định.');
+    }
+    t+='\n';
+  }
+  const mkPn=(DB.makeups||[]).filter(x=>x.sid===s.id&&x.status==='pending');
+  if(mkPn.length)t+='Còn '+mkPn.length+' buổi vắng đang chờ xếp lịch dạy bù.\n';
+  t+=outL.length?('Về học phí: còn '+outL.length+' buổi chưa thanh toán ('+fmtM(owed)+').\n'):'Học phí của em đã thanh toán đầy đủ — cảm ơn anh/chị!\n';
+  t+='Cảm ơn anh/chị đã đồng hành cùng em. – '+(DB.settings.name||'Giáo viên');
+  return t;
+}
+function openProgressReport(sid){
+  const s=studentById(sid); if(!s)return;
+  const txt=msgProgress(s,30);
+  const key=(DB.settings.geminiKey||'').trim();
+  openModal(mHead('Nhận xét gửi phụ huynh – '+H(s.name))
+    +'<div class="hint mb">Tổng hợp tự động từ sổ 30 ngày qua — sửa lời tuỳ ý rồi Sao chép gửi Zalo.'+(key?' Có thể nhờ Gemini viết mượt hơn.':'')+'</div>'
+    +'<textarea class="inp" id="pgTxt" rows="9" style="line-height:1.55;font-size:13px">'+H(txt)+'</textarea>'
+    +'<div class="m-foot"><button class="btn btn-ghost" onclick="closeModal(true)">Đóng</button>'
+    +(key?'<button class="btn btn-ghost" id="pgAiBtn" data-tip="Gemini viết lại thân tình hơn — giữ nguyên số liệu" onclick="pgPolish()">✨ Gemini viết lại</button>':'')
+    +'<button class="btn btn-pri" data-tip="Chép — dán vào Zalo gửi phụ huynh" onclick="copyText(document.getElementById(\'pgTxt\').value)">'+ic('copy')+' Sao chép</button></div>',true);
+}
+async function pgPolish(){
+  const ta=document.getElementById('pgTxt'),btn=document.getElementById('pgAiBtn'); if(!ta)return;
+  const key=(DB.settings.geminiKey||'').trim(); if(!key)return;
+  if(btn){btn.disabled=true;btn.textContent='Đang viết…';}
+  try{
+    const out=await geminiPlain('Viết lại tin nhắn sau gửi phụ huynh học sinh: giọng ấm áp tự nhiên, tiếng Việt, GIỮ NGUYÊN mọi số liệu và tên, không thêm thông tin mới, không markdown, dưới 130 từ:\n\n'+ta.value);
+    if(out)ta.value=out.trim();
+  }catch(e){toast('Gemini lỗi: '+(e.message||e));}
+  if(btn){btn.disabled=false;btn.textContent='✨ Gemini viết lại';}
+}
+async function geminiPlain(prompt){
+  const key=(DB.settings.geminiKey||'').trim(); if(!key)throw new Error('Chưa có khoá Gemini');
+  let cached='';try{cached=localStorage.getItem('tedu_ai_model')||'';}catch(e){}
+  const models=(cached?[cached]:[]).concat(AI_MODELS.filter(function(m){return m!==cached;}));
+  for(let i=0;i<models.length;i++){
+    let res;
+    try{
+      res=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+models[i]+':generateContent?key='+encodeURIComponent(key),{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{temperature:0.6}})});
+    }catch(e){throw new Error('Không gọi được Gemini — kiểm tra mạng.');}
+    if(res.ok){
+      const j=await res.json();
+      const cand=(j.candidates||[])[0];
+      return cand&&cand.content&&cand.content.parts?cand.content.parts.map(function(x){return x.text||'';}).join(''):'';
+    }
+    if(i===models.length-1)throw new Error('Gemini lỗi '+res.status);
+  }
+  return '';
+}
 function copyFeeMsg(sid){const s=studentById(sid);if(s)copyText(msgFee(s));}
 function openMsgTemplates(sid){
   const s=studentById(sid); if(!s)return;
   const m=curMonth();
-  const tpls=[['Nhắc học phí',msgFee(s)],['Báo cáo học tập',msgReport(s,m)],['Thông báo nghỉ học',msgOff(s)]];
+  const tpls=[['Nhắc học phí',msgFee(s)],['Báo cáo học tập',msgReport(s,m)],['Nhận xét tiến bộ (30 ngày)',msgProgress(s,30)],['Thông báo nghỉ học',msgOff(s)]];
   let html=mHead('Mẫu tin nhắn – '+H(s.name));
   html+='<div class="hint mb">Bấm "Sao chép" rồi dán vào Zalo/SMS gửi phụ huynh.'+(s.parentPhone?' <a href="https://zalo.me/'+phoneDigits(s.parentPhone)+'" target="_blank">Mở Zalo của PH →</a>':'')+'</div>';
   tpls.forEach((t,i)=>{
@@ -2358,15 +2529,15 @@ const SLIP_CSS=".slipwrap{width:430px;max-width:100%;margin:0 auto;filter:drop-s
 +".slip-printed{margin-top:7px;font-size:8px;font-weight:600;letter-spacing:.22em;color:#A39A85;line-height:1.6}"
 +".pagebreak{page-break-after:always;padding:10px 0}";
 function deAccent(s){return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\u0111/g,'d').replace(/\u0110/g,'D');}
-function qrImgURL(amount,info){
-  const st=DB.settings;
-  if(!st.bankId||!st.bankAcc)return '';
-  let u='https://img.vietqr.io/image/'+encodeURIComponent(st.bankId.trim())+'-'+encodeURIComponent(st.bankAcc.trim())+'-compact2.jpg?';
+function qrURLFrom(bid,bacc,bh,amount,info){
+  if(!bid||!bacc)return '';
+  let u='https://img.vietqr.io/image/'+encodeURIComponent(String(bid).trim())+'-'+encodeURIComponent(String(bacc).trim())+'-compact2.jpg?';
   if(amount>0)u+='amount='+Math.round(amount)+'&';
   u+='addInfo='+encodeURIComponent(deAccent(info));
-  if(st.bankHolder)u+='&accountName='+encodeURIComponent(deAccent(st.bankHolder));
+  if(bh)u+='&accountName='+encodeURIComponent(deAccent(bh));
   return u;
 }
+function qrImgURL(amount,info){const st=DB.settings;return qrURLFrom(st.bankId,st.bankAcc,st.bankHolder,amount,info);}
 function moneyToWordsVN(n){
   n=Math.round(+n||0);
   if(n<=0)return '';
@@ -2401,17 +2572,36 @@ function moneyToWordsVN(n){
 }
 const SLIP_FLEURON='<svg width="15" height="15" viewBox="0 0 24 24" fill="#B08D3F"><path d="M12 2.5c2 2.8 1.3 5.4-.5 6.9C9.7 7.9 9.2 5.2 12 2.5Z"/><path d="M12 21.5c-2-2.8-1.3-5.4.5-6.9 1.8 1.5 2.3 4.2-.5 6.9Z"/><path d="M2.5 12c2.8-2 5.4-1.3 6.9.5-1.5 1.8-4.2 2.3-6.9-.5Z"/><path d="M21.5 12c-2.8 2-5.4 1.3-6.9-.5 1.5-1.8 4.2-2.3 6.9.5Z"/><circle cx="12" cy="12" r="1.6"/></svg>';
 function slipCorner(pos){return '<svg class="sf-'+pos+'" viewBox="0 0 30 30" fill="none"><path d="M2 28V10Q2 2 10 2h18" stroke="#B08D3F" stroke-width="1.6"/><path d="M7.5 28V13.5Q7.5 7.5 13.5 7.5H28" stroke="#B08D3F" stroke-width="1" opacity=".55"/><circle cx="8" cy="8" r="1.7" fill="#B08D3F"/></svg>';}
-function slipCardHTMLPay(p){
-  const s=studentById(p.studentId); if(!s)return '';
-  const cls=classesOfStudent(s.id);
-  const C=cls.length?cls[0].color:'#93392C';
-  const sess=(p.sessionKeys||[]).map(k=>({date:k.split('|')[0],classId:k.split('|')[1]})).sort((a,b)=>a.date.localeCompare(b.date));
-  const n=p.sessions||sess.length;
-  const amount=+p.amount||0;
-  const idx=DB.payments.filter(x=>x.studentId===s.id).sort((a,b)=>(a.paidAt||'').localeCompare(b.paidAt||'')).findIndex(x=>x.id===p.id)+1;
-  const no='BL-'+String(DB.students.findIndex(x=>x.id===s.id)+1).padStart(2,'0')+'-'+String(idx||1).padStart(2,'0');
-  const st=DB.settings;
-  const qr=qrImgURL(amount,'HP '+s.name);
+function paySerial(pm){
+  const s=studentById(pm.studentId); if(!s)return 'BL-00-00';
+  const idx=DB.payments.filter(x=>x.studentId===s.id).sort((a,b)=>(a.paidAt||'').localeCompare(b.paidAt||'')).findIndex(x=>x.id===pm.id)+1;
+  return 'BL-'+String(DB.students.findIndex(x=>x.id===s.id)+1).padStart(2,'0')+'-'+String(idx||1).padStart(2,'0');
+}
+/* Gói toàn bộ dữ liệu một phiếu thành object thuần — nền của liên kết gửi phụ huynh */
+function slipPayloadOf(pm){
+  const s=studentById(pm.studentId); if(!s)return null;
+  const cls=classesOfStudent(s.id); const st=DB.settings;
+  const days=(pm.sessionKeys||[]).map(k=>k.split('|')[0]).sort();
+  return {v:1,id:pm.id,tn:st.name||'TEdu',sn:s.name,gr:s.grade||'',
+    sub:cls.length?cls[0].name:(s.subject||''),c:cls.length?cls[0].color:'#93392C',
+    ser:paySerial(pm),rate:+(pm.rate||s.rate)||0,n:pm.sessions||days.length,amt:+pm.amount||0,
+    d:pm.paidAt||todayStr(),paid:pm.paid?1:0,cd:pm.collectedAt||'',note:(pm.note||'').trim(),days:days,
+    bid:st.bankId||'',bacc:st.bankAcc||'',bh:st.bankHolder||'',binfo:st.bankInfo||''};
+}
+function slipCardHTMLPay(pm){const o=slipPayloadOf(pm);return o?slipCardHTMLData(o,{qrImage:DB.settings.qrImage||''}):'';}
+/* Vẽ phiếu thuần từ dữ liệu — dùng trong app lẫn trang phiếu phụ huynh (#pslip) */
+function slipCardHTMLData(o,opt){
+  opt=opt||{};
+  const C=o.c||'#93392C';
+  const sess=(o.days||[]).map(d=>({date:d}));
+  const n=+o.n||sess.length;
+  const amount=+o.amt||0;
+  const no=o.ser||'BL-00-00';
+  const st={name:o.tn,bankId:o.bid,bankAcc:o.bacc,bankHolder:o.bh,bankInfo:o.binfo,qrImage:opt.qrImage||''};
+  const s={name:o.sn,grade:o.gr};
+  const p={id:o.id||'plink',paidAt:o.d,paid:!!o.paid,collectedAt:o.cd,rate:o.rate,note:o.note};
+  const cls=o.sub?[{name:o.sub,color:C}]:[];
+  const qr=qrURLFrom(o.bid,o.bacc,o.bh,amount,'HP '+o.sn);
   const dstamp=fmtD(p.paidAt||todayStr()).replace(/\//g,'.');
   const words=moneyToWordsVN(amount);
   const note=(p.note||'').trim();
@@ -2487,6 +2677,7 @@ function openPaymentSlip(pid){
     +'<div id="slipPrev" class="mt">'+slipCardHTMLPay(p)+'</div>'
     +'<div class="m-foot">'
     +'<button class="btn btn-ghost" onclick="closeModal()">Đóng</button>'
+    +'<button class="btn btn-ghost" data-tip="Tạo liên kết phiếu — phụ huynh mở xem trên điện thoại + quét QR, không cần cài gì" onclick="shareSlip(\''+pid+'\')">'+ic('message')+' Gửi phụ huynh</button>'
     +(p.paid
       ?'<button class="btn btn-ghost" data-tip="Hoàn tác — chuyển phiếu về chờ thu" onclick="markPaid(\''+pid+'\',false)">↺ Chưa thu</button>'
       :'<button class="btn btn-grn" data-tip="Phụ huynh đã trả — đánh dấu đã thu, phiếu đóng dấu ĐÃ THU ĐỦ" onclick="markPaid(\''+pid+'\',true)">'+ic('check')+' ĐÃ THU TIỀN</button>')
@@ -2509,6 +2700,42 @@ function printSlips(inner){
 function printPayment(pid){
   const p=DB.payments.find(x=>x.id===pid); if(!p)return;
   printSlips('<div class="pagebreak">'+slipCardHTMLPay(p)+'</div>');
+}
+/* ----- Liên kết phiếu gửi phụ huynh: toàn bộ phiếu nén trong URL, không cần server ----- */
+function b64uEnc(str){return btoa(unescape(encodeURIComponent(str))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function b64uDec(str){str=String(str||'').replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';return decodeURIComponent(escape(atob(str)));}
+function slipLinkOf(pid){
+  const pm=DB.payments.find(x=>x.id===pid); if(!pm)return '';
+  const o=slipPayloadOf(pm); if(!o)return '';
+  delete o.id;
+  return location.href.split('#')[0]+'#pslip='+b64uEnc(JSON.stringify(o));
+}
+function shareSlip(pid){
+  const url=slipLinkOf(pid); if(!url){toast('Không tạo được liên kết');return;}
+  const pm=DB.payments.find(x=>x.id===pid); const s=pm?studentById(pm.studentId):null;
+  const txt='Phiếu học phí'+(s?' của em '+s.name:'')+' — anh/chị mở liên kết để xem phiếu và quét QR thanh toán ạ:';
+  if(navigator.share){navigator.share({title:'Phiếu học phí',text:txt,url:url}).catch(function(){});}
+  else{copyText(txt+'\n'+url);toast('Đã chép liên kết phiếu — dán vào Zalo gửi phụ huynh');}
+}
+function handleParentLink(){
+  if(!/^#pslip=/.test(location.hash||''))return false;
+  let o=null; try{o=JSON.parse(b64uDec(location.hash.slice(7)));}catch(e){}
+  const land=document.getElementById('landing'); if(land)land.style.display='none';
+  const app=document.getElementById('app'); if(app)app.style.display='none';
+  const styleEl=document.createElement('style');styleEl.textContent=SLIP_CSS;document.head.appendChild(styleEl);
+  const div=document.createElement('div'); div.id='pslip';
+  div.style.cssText='max-width:600px;margin:18px auto;padding:0 10px 40px';
+  if(!o||!o.sn){
+    div.innerHTML='<div style="text-align:center;padding:60px 20px;font-family:\'Be Vietnam Pro\',sans-serif">Liên kết phiếu không hợp lệ hoặc đã bị cắt ngắn khi gửi.<br>Nhờ giáo viên gửi lại giúp anh/chị nhé.</div>';
+  }else{
+    div.innerHTML='<div style="text-align:center;padding:14px 0 4px;font-family:\'Be Vietnam Pro\',sans-serif;font-size:13px;color:#6d6c5f">Kính gửi phụ huynh em <b>'+H(o.sn)+'</b> — phiếu học phí từ '+H(o.tn||'giáo viên')+'</div>'
+      +slipCardHTMLData(o,{})
+      +'<div style="text-align:center;margin-top:14px"><button class="btn btn-pri" onclick="window.print()">In / Lưu PDF</button></div>'
+      +'<div style="text-align:center;margin-top:18px;font-family:\'Be Vietnam Pro\',sans-serif;font-size:11px;color:#8a887b">Phiếu tạo bởi TEdu ✳ — tiệm quản lý dạy học</div>';
+    document.title='Phiếu học phí – '+o.sn;
+  }
+  document.body.appendChild(div);
+  return true;
 }
 
 /* ========== HƯỚNG DẪN SỬ DỤNG ========== */
@@ -2573,7 +2800,8 @@ function renderGuide(){
        'Chọn ca → cả lớp mặc định <b>Có mặt</b>, chỉ cần sửa em nào khác đi. Có nút "Tất cả có mặt" và ô ghi chú từng em.',
        'Bốn trạng thái quyết định học phí — bấm thử bên dưới để hiểu quy tắc.',
        'Bấm <b>Lưu điểm danh</b>. Muốn sửa: mở lại từ lịch, từ sổ lớp, hoặc mục Lịch sử ngay dưới.',
-       'Dạy bù ngày không có lịch? Tick <b>"Hiện tất cả ca"</b> để chọn ca ngoài lịch.'])
+       'Dạy bù ngày không có lịch? Tick <b>"Hiện tất cả ca"</b> để chọn ca ngoài lịch.',
+       'Em nào <b>vắng</b> sẽ hiện nút <b>+ Bù</b> — bấm để ghi nhớ buổi cần dạy bù. Danh sách chờ bù nằm ở Tổng quan và hồ sơ từng em; dạy xong bấm <b>✓ Đã bù</b>.'])
     +D('<div class="att-row" style="border:none;padding:0"><div class="who"><span class="av av-sm">MA</span><div><div style="font-weight:600">Nguyễn Minh Anh</div><div class="muted small">9A1 – THCS Lê Quý Đôn</div></div></div><div class="att-btns"><button class="att-btn on-p" onclick="gdAtt(this,\'p\')">Có mặt</button><button class="att-btn" onclick="gdAtt(this,\'l\')">Muộn</button><button class="att-btn" onclick="gdAtt(this,\'e\')">Vắng CP</button><button class="att-btn" onclick="gdAtt(this,\'a\')">Vắng KP</button></div></div>','Có mặt — buổi này ĐƯỢC TÍNH vào học phí.')
     +'<div class="g-actions">'+A('Điểm danh hôm nay',"nav('att')")+'</div>'});
   // 6. HỌC PHÍ
@@ -2581,7 +2809,8 @@ function renderGuide(){
     S(['Mỗi em có một <b>lưới buổi như Excel</b>: ô <b>trắng</b> = chưa lập phiếu, ô <b>vàng</b> = đã lập phiếu chờ thu tiền, ô <b>xanh gạch</b> = đã thu. Nợ vắt tháng (cuối tháng 6 sang tháng 7) nằm chung một lưới.',
        'Bấm ô trắng để <b>tick chọn</b> (đỏ) → <b>LẬP PHIẾU & IN</b> — phiếu in ra gửi phụ huynh, các buổi chuyển <b>vàng chờ thu</b>. Lập phiếu KHÔNG có nghĩa là đã nhận tiền.',
        'Khi phụ huynh trả tiền: bấm ô vàng (hoặc mở Lịch sử phiếu) → <b>✓ ĐÃ THU TIỀN</b> — các buổi chuyển <b>xanh</b>, phiếu đóng dấu <b>ĐÃ THU ĐỦ</b>. Bấm nhầm có nút hoàn tác ↺.',
-       'Chốt nhầm ngày? <b>Huỷ phiếu</b> trong Lịch sử — các buổi trở lại ô trắng, tick lại từ đầu. Phiếu nào cũng <b>in lại</b> được.'])
+       'Chốt nhầm ngày? <b>Huỷ phiếu</b> trong Lịch sử — các buổi trở lại ô trắng, tick lại từ đầu. Phiếu nào cũng <b>in lại</b> được.',
+       'Nút <b>Gửi phụ huynh</b> trên phiếu tạo <b>liên kết</b> — dán vào Zalo, phụ huynh mở là thấy phiếu + quét QR ngay trên điện thoại, <b>không cần cài gì</b>. Đầu trang Học phí còn có <b>Báo cáo thu nhập</b> theo tháng và nút <b>Xuất CSV</b> mở bằng Excel.'])
     +D('<div id="gdSlip" style="max-width:300px;margin:0 auto"><div class="slip-total" style="background:#F7F2E3"><div class="slip-tl">TỔNG THANH TOÁN</div><div class="slip-tv">1.620.000&#8239;<small>₫</small></div><div class="slip-words">— Một triệu sáu trăm hai mươi nghìn đồng —</div><div class="slip-stampwrap"><span class="slip-stamp">ĐÃ THU ĐỦ</span></div></div></div><div class="right mt"><button class="btn btn-xs btn-ghost" onclick="gdSlipDemo()">Đóng dấu lại</button></div>','Trích một góc phiếu — tiền tự đổi thành chữ, dấu đỏ đóng ngay khi chốt.')
     +'<div class="g-actions">'+A('Mở Học phí',"nav('fees')")+A('Xem phiếu mẫu',"if(DB.payments.length){openPaymentSlip(DB.payments[DB.payments.length-1].id)}else toast('Chưa có lần chốt nào — hãy Chốt & in ở trang Học phí')",'Mở phiếu của lần chốt gần nhất')+'</div>'});
   // 7. ĐIỂM KT & GIÁO ÁN
@@ -2616,7 +2845,7 @@ function renderGuide(){
     +D('<div class="flex"><span class="bd bd-sky">ADMIN</span><span class="bd bd-grn">Hoạt động</span><span class="bd bd-red">Bị khoá</span><button class="btn btn-xs btn-danger" onclick="toast(\'Đây chỉ là minh hoạ\')">Khoá</button><button class="btn btn-xs btn-grn" onclick="toast(\'Đây chỉ là minh hoạ\')">Mở khoá</button></div>','Các trạng thái trong bảng tài khoản của trang Quản trị.')
     +(FB.isAdmin?'<div class="g-actions">'+A('Mở trang Quản trị',"nav('admin')")+'</div>':'<div class="hint mt">Bạn sẽ thấy mục Quản trị trong sidebar nếu email của bạn là quản trị viên.</div>')});
   secs.push({t:'Trợ lý AI',ic:'zap',body:
-    S(['Mục <b>Trợ lý AI</b> là thư ký của tiệm: gõ lệnh bằng lời thường — <i>"thêm học sinh Lan lớp 8A môn Văn giá 160k"</i>, <i>"thu Minh Anh 500k"</i>, <i>"điểm danh Toán 9 hôm nay"</i>, <i>"ai chưa đóng tiền?"</i>',
+    S(['Mục <b>Trợ lý AI</b> là thư ký của tiệm: gõ lệnh bằng lời thường — <i>"thêm học sinh Lan lớp 8A môn Văn giá 160k"</i>, <i>"thu Minh Anh 500k"</i>, <i>"điểm danh Toán 9 hôm nay"</i>, <i>"ai chưa đóng tiền?"</i>, <i>"nhận xét Minh Anh"</i>',
        'Mọi lệnh ghi sổ đều hiện <b>thẻ xác nhận</b> — bấm <b>Thực hiện</b> mới ghi thật, bấm <b>Huỷ</b> là bỏ. Không lo trợ lý hiểu nhầm.',
        'Muốn trợ lý <b>hiểu mọi kiểu nói và tán gẫu giải đáp</b>: lấy khoá Gemini miễn phí tại <b>aistudio.google.com/app/apikey</b> rồi dán vào <b>Cài đặt → Trợ lý AI</b>. Không có khoá vẫn dùng được bộ lệnh mẫu.',
        'Trợ lý đọc được số liệu thật của sổ (lịch hôm nay, học phí tháng, hồ sơ từng em) nên hỏi gì về sổ cũng trả lời được.'])
@@ -3213,7 +3442,7 @@ const AI_ACT_META={
  take_attendance:{label:'Mở điểm danh',icon:'check-circle'},
  navigate:{label:'Mở trang',icon:'arrow-right'}
 };
-const AI_FIELD_LB={name:'Tên',grade:'Lớp / Trường',subject:'Môn',rate:'Đơn giá/buổi',parentName:'Phụ huynh',parentPhone:'SĐT phụ huynh',phone:'SĐT học sinh',note:'Ghi chú',status:'Trạng thái',days:'Học vào thứ',start:'Bắt đầu',end:'Kết thúc',startDate:'Ngày bắt đầu kỳ',endDate:'Ngày kết thúc kỳ',amount:'Số tiền',month:'Cho tháng',method:'Hình thức',title:'Tên bài',score:'Điểm',date:'Ngày',content:'Nội dung',homework:'Bài tập về nhà',page:'Trang',student:'Học sinh',class:'Ca học',students:'Học sinh'};
+const AI_FIELD_LB={name:'Tên',grade:'Lớp / Trường',subject:'Môn',rate:'Đơn giá/buổi',parentName:'Phụ huynh',parentPhone:'SĐT phụ huynh',phone:'SĐT học sinh',note:'Ghi chú',status:'Trạng thái',days:'Học vào thứ',start:'Bắt đầu',end:'Kết thúc',startDate:'Ngày bắt đầu kỳ',endDate:'Ngày kết thúc kỳ',amount:'Số tiền',method:'Hình thức',title:'Tên bài',score:'Điểm',date:'Ngày',content:'Nội dung',homework:'Bài tập về nhà',page:'Trang',student:'Học sinh',class:'Ca học',students:'Học sinh'};
 function aiNorm(s){return deAccent(String(s||'')).toLowerCase();}
 function aiDayName(d){return ({1:'T2',2:'T3',3:'T4',4:'T5',5:'T6',6:'T7',0:'CN'})[d]||d;}
 function aiAdd90(t){const m=/^(\d{1,2}):(\d{2})$/.exec(t||'');if(!m)return'19:30';let mm=(+m[1])*60+(+m[2])+90;return pad(Math.floor(mm/60)%24)+':'+pad(mm%60);}
@@ -3253,7 +3482,8 @@ function aiWelcomeHTML(){
   +'<ul class="ai-ul"><li><b>Thêm / sửa / xoá</b> học sinh, ca học — <i>"thêm học sinh Lan lớp 8A môn Văn giá 160k"</i></li>'
   +'<li><b>Gán vào ca</b>, <b>thu học phí</b>, <b>thêm điểm</b> — <i>"thu Minh Anh 500k", "cho Gia Bảo 8 điểm"</i></li>'
   +'<li><b>Mở điểm danh</b> đúng buổi — <i>"điểm danh Toán 9 hôm nay"</i></li>'
-  +'<li><b>Trả lời số liệu</b> — <i>"ai chưa đóng tiền?", "hôm nay dạy gì?"</i></li></ul>'
+  +'<li><b>Trả lời số liệu</b> — <i>"ai chưa đóng tiền?", "hôm nay dạy gì?"</i></li>'
+  +'<li><b>Nhận xét tiến bộ</b> gửi phụ huynh — <i>"nhận xét Minh Anh"</i></li></ul>'
   +'Mọi lệnh ghi sổ tôi đều đưa <b>thẻ xác nhận</b> trước — bấm <b>Thực hiện</b> mới ghi thật.';
 }
 function aiPush(who,html){AI_LOG.push({who:who,html:html});if(AI_LOG.length>80)AI_LOG=AI_LOG.slice(-80);aiRepaint();}
@@ -3641,6 +3871,15 @@ function aiLocalParse(text){
     const ss=aiFindStudents(m[1]);if(!ss.length)return{html:'Không tìm thấy học sinh "'+H(m[1])+'".',actions:[]};if(ss.length>1)return aiAmbig(ss,'s');
     const sc=parseFloat(String(m[2]).replace(',','.'));
     return{html:'Xác nhận:',actions:[{type:'add_score',studentId:ss[0].id,score:sc,title:(m[3]||'Kiểm tra').trim()||'Kiểm tra'}]};
+  }
+  /* nhận xét tiến bộ */
+  m=/^(?:nhan xet|danh gia|tien bo)(?:\s+(?:cua|cho|ve))?\s+(.+)$/.exec(nt);
+  if(m){
+    const ss=aiFindStudents(m[1]);
+    if(ss.length===1){
+      return{html:'Nhận xét 30 ngày của <b>'+H(ss[0].name)+'</b>:<div class="ai-note" style="white-space:pre-wrap">'+H(msgProgress(ss[0],30))+'</div><div class="mt"><button class="btn btn-sm btn-ghost" onclick="openProgressReport(\''+ss[0].id+'\')">✍ Mở &amp; sửa để gửi</button></div>',actions:[]};
+    }
+    if(ss.length>1)return aiAmbig(ss,'s');
   }
   /* xem hồ sơ */
   m=/^(?:xem|thong tin|ho so)\s+(?:hoc sinh|hs|em|cua)?\s*(.+)$/.exec(nt);
@@ -4395,10 +4634,23 @@ const I18N={
 "Điểm danh & học phí":["Attendance & tuition","출석과 수업료"],"Phiếu học phí có QR":["Receipts with QR","QR 영수증"],"Hồ sơ & tiến bộ":["Profiles & progress","프로필과 성장"],"Xem mục lục →":["See contents →","목차 보기 →"],
 "Hướng dẫn sử dụng":["User guide","사용 설명서"],"Từ A đến Z · minh hoạ bấm thử được ngay trong trang":["A to Z · interactive examples right on this page","A부터 Z까지 · 페이지에서 바로 체험"],
 "Tìm tên, lớp, SĐT...":["Search name, class, phone...","이름, 학년, 전화 검색..."],"Tìm học sinh...":["Search students...","학생 검색..."],"Tìm tên, SĐT...":["Search name, phone...","이름, 전화 검색..."],"Tìm tiêu đề, nội dung...":["Search title, content...","제목, 내용 검색..."],"Tìm tài liệu...":["Search files...","자료 검색..."],"Tìm tên tài liệu, ghi chú...":["Search file name, notes...","파일명, 메모 검색..."],
-"Tiếp tục nhập":["Keep editing","계속 입력"],"Bỏ thay đổi":["Discard changes","변경 취소"],"Bỏ dữ liệu":["Discard data","데이터 버리기"],"Chưa lưu thay đổi":["Unsaved changes","저장되지 않은 변경"],"Bảng nhập đang có dữ liệu":["The table has unsaved data","입력 중인 데이터가 있습니다"]
+"Tiếp tục nhập":["Keep editing","계속 입력"],"Bỏ thay đổi":["Discard changes","변경 취소"],"Bỏ dữ liệu":["Discard data","데이터 버리기"],"Chưa lưu thay đổi":["Unsaved changes","저장되지 않은 변경"],"Bảng nhập đang có dữ liệu":["The table has unsaved data","입력 중인 데이터가 있습니다"],
+"Gửi phụ huynh":["Send to parent","학부모에게 보내기"],"Báo cáo thu nhập":["Income report","수입 보고서"],"Phát sinh (dạy)":["Earned (taught)","발생액(수업)"],"Đã lập phiếu":["Invoiced","청구서 발행"],"Đã thu tiền":["Collected","수금 완료"],"Xuất CSV phiếu thu":["Export receipts CSV","영수증 CSV 내보내기"],
+"Buổi chờ dạy bù":["Awaiting make-up","보강 대기 수업"],"Chờ bù":["To make up","보강 대기"],"Đã bù ✓":["Made up ✓","보강 완료 ✓"],"+ Bù":["+ Make-up","+ 보강"],"Buổi dạy bù":["Make-up sessions","보강 수업"],"✓ Đã bù":["✓ Made up","✓ 보강 완료"],
+"✍ Nhận xét":["✍ Progress note","✍ 평가 작성"],"Nhận xét tiến bộ (30 ngày)":["Progress note (30 days)","성장 평가 (30일)"],"✨ Gemini viết lại":["✨ Rewrite with Gemini","✨ Gemini로 다듬기"],"✍ Mở & sửa để gửi":["✍ Open & edit to send","✍ 열어서 수정 후 보내기"],
+"Đã thu hết":["All collected","전액 수금"],"Chưa thu*":["Owed*","미수*"],"Chưa thu":["Owed","미수"],"Chưa phát sinh":["Nothing billed yet","청구 내역 없음"],
+"Ghi nhớ buổi vắng này cần dạy bù":["Remember this absence needs a make-up session","이 결석은 보강이 필요하다고 기록"],"Đã dạy bù xong buổi này":["Make-up session done","보강 완료됨"],"Tạo liên kết phiếu — phụ huynh mở xem trên điện thoại + quét QR, không cần cài gì":["Create a receipt link — parents open it on their phone and scan the QR, nothing to install","영수증 링크 생성 — 학부모가 폰에서 열고 QR 스캔, 설치 불필요"],"Chép liên kết phiếu — dán Zalo gửi phụ huynh":["Copy receipt link — paste into Zalo for the parent","영수증 링크 복사 — Zalo에 붙여넣기"]
 };
 const I18N_RX=[
 [/^Hôm nay là (.+), ngày (.+)$/,"Today is $1, $2","오늘은 $2 ($1)"],
+[/^Còn (\d+) buổi chưa thu$/,"$1 sessions owed","미수 $1회"],
+[/^Còn (\d+) buổi$/,"$1 left","$1회 남음"],
+[/^Buổi chờ dạy bù \((\d+)\)$/,"Awaiting make-up ($1)","보강 대기 ($1)"],
+[/^vắng (.+)$/,"absent $1","결석 $1"],
+[/^Vắng (.+)$/,"Absent $1","결석 $1"],
+[/^Đã bù (.+)$/,"Made up $1","보강 완료 $1"],
+[/^Nhận xét gửi phụ huynh – (.+)$/,"Progress note for parents – $1","학부모용 평가 – $1"],
+[/^Nhận xét 30 ngày của (.+)$/,"30-day progress note for $1","$1의 30일 평가"],
 [/^Xin chào, (.+)$/,"Hello, $1","안녕하세요, $1"],
 [/^tháng (\d+)\/(\d+)$/,"$1\/$2","$2년 $1월"],
 [/^Tháng (\d+)\/(\d+)$/,"Month $1\/$2","$2년 $1월"],
@@ -4603,6 +4855,7 @@ function i18nInit(){
   document.addEventListener('click',function(){setTimeout(hide,150);});
 })();
 (function init(){
+  if(handleParentLink())return;
   i18nInit();
   const styleEl=document.createElement('style');styleEl.textContent=SLIP_CSS;document.head.appendChild(styleEl);
   const fresh=!loadDB();
