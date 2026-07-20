@@ -3639,6 +3639,13 @@ function admRender(adminEmails){
     +'<button class="btn btn-ghost" data-tip="Gỡ khoá dùng chung" onclick="document.getElementById(\'adm_gk\').value=\'\';admSetGk()">Gỡ</button></div>'
     +'<div class="hint mt">'+(admCfg.sharedGeminiKey?'<span class="bd bd-grn">Đang bật</span> Giáo viên toàn hệ thống đang được dùng chung khoá này.':'<span class="bd bd-gray">Chưa đặt</span> Ai chưa có khoá riêng sẽ dùng chế độ cơ bản.')+'</div></div>';
   h+='<div class="card"><h3>💬 Hộp thư giáo viên</h3><div id="admFbBox">'+admFbBoxHTML()+'</div></div>';
+  // Xem thử theme lễ
+  h+='<div class="card"><h3>🎭 Xem thử theme ngày lễ</h3>'
+    +'<div class="hint mb">Bấm để áp thử từng theme lên toàn giao diện (chỉ máy bạn thấy, không lưu). Bấm <b>Tắt xem thử</b> để về theme theo ngày thật.</div>'
+    +'<div class="chips" style="flex-wrap:wrap;gap:8px">'
+    +Object.keys(HOL_NAMES).map(function(k){return '<span class="chip'+(HOL_PREVIEW===k?' on':'')+'" onclick="holPreview(\''+k+'\')">'+HOL_NAMES[k]+'</span>';}).join('')
+    +'<span class="chip'+(HOL_PREVIEW==='bday'?' on':'')+'" onclick="holPreview(\'bday\')">Sinh nhật 🎂</span>'
+    +'</div><div class="flex mt"><button class="btn btn-sm btn-ghost" onclick="holPreview(\'\')">✕ Tắt xem thử</button><span id="admThemeNow" class="small muted" style="margin-left:8px">'+(HOL_PREVIEW?('Đang xem: '+(HOL_PREVIEW==='bday'?'Sinh nhật 🎂':(HOL_NAMES[HOL_PREVIEW]||''))):'')+'</span></div></div>';
   // Users
   h+='<div class="card"><h3>'+ic('users')+' Tài khoản đã đăng ký ('+tot+')</h3><div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tài khoản</th><th>Đăng ký</th><th>Hoạt động cuối</th><th class="num">HS</th><th>Trạng thái</th><th></th></tr></thead><tbody>';
   admUsers.forEach(function(u){
@@ -5725,6 +5732,30 @@ function bdayClose(y){
 function holClear(){
   ['holidayBanner','holDeco','holFx','holGarland','bdayBanner','bdayCard'].forEach(function(id){const e=document.getElementById(id);if(e)e.remove();});
   document.body.className=document.body.className.replace(/\bth-[a-z0-9]+\b/g,' ').replace(/\s+/g,' ').trim();
+}
+const HOL_NAMES={tet:'Tết 🧧',trungthu:'Trung thu 🏮',gioto:'Giỗ Tổ ⚜️',newyear:'Tết dương 🎆',phunu83:'8/3 🌷',thongnhat:'30/4–1/5 🕊️',thieunhi:'1/6 🎈',quockhanh:'2/9 🇻🇳',phunu2010:'20/10 🌹',nhagiao:'20/11 💐',noel:'Noel 🎄',khaigiang:'Khai giảng 🎒',doanngo:'Đoan Ngọ 🍒',phatdan:'Phật Đản 🪷',vulan:'Vu Lan 💗',hanthuc:'Hàn thực 🍡',valentine:'Valentine 💝',halloween:'Halloween 🎃',giadinh:'Gia đình VN 🏡'};
+let HOL_PREVIEW='';
+function holPreview(key){
+  HOL_PREVIEW=key||'';
+  holClear();
+  if(!key){toast('Đã tắt xem thử — trở về theme theo ngày thật');applyFestive();var eb=document.getElementById('admThemeNow');if(eb)eb.textContent='';return;}
+  if(key==='bday'){
+    document.body.classList.add('th-bday');
+    holFxMake(['🎀','🌸','✨','🎈','🌷','💮'],'down');
+    holGarlandMake(['🎀','🎂','🌸','🎈','✨']);
+    const m0=document.querySelector('#app main');
+    if(m0){const dv=document.createElement('div');dv.id='bdayBanner';dv.className='hol-b th-bday';dv.innerHTML='<span>🎂 (Xem thử) Hôm nay là sinh nhật … — tuổi mới thật rực rỡ! 🎀</span>';m0.insertBefore(dv,m0.firstChild);}
+  }else{
+    const meta=HOL_META[key]; if(!meta)return;
+    document.body.classList.add('th-'+key);
+    const deco=document.createElement('div');deco.id='holDeco';deco.textContent=meta.deco;document.body.appendChild(deco);
+    holFxMake(meta.fx,meta.dir);
+    const m0=document.querySelector('#app main');
+    if(m0){const dv=document.createElement('div');dv.id='holidayBanner';dv.className='hol-b th-'+key;dv.innerHTML='<span>'+meta.g+'</span>';m0.insertBefore(dv,m0.firstChild);}
+    holGarlandMake(meta.gar);
+  }
+  var el=document.getElementById('admThemeNow');if(el)el.textContent='Đang xem: '+(key==='bday'?'Sinh nhật 🎂':(HOL_NAMES[key]||key));
+  toast('Xem thử theme: '+(key==='bday'?'Sinh nhật 🎂':(HOL_NAMES[key]||key)));
 }
 function applyFestive(dateOpt){
   holClear();
