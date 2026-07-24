@@ -151,7 +151,7 @@ main{flex:1;min-width:0;padding:34px 40px 90px;background-color:var(--paper);bac
 .card::before{content:'';position:absolute;inset:3px;border:1px solid rgba(var(--inkr),.22);pointer-events:none}
 .card>*{position:relative}
 .card h3{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;margin-bottom:13px;color:var(--ink);display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line);padding-bottom:11px}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:12px;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:14px}
 .stat{position:relative;background:var(--card);border:2px solid rgba(var(--inkr),.4);padding:15px 16px 12px}
 .stat::before{content:'';position:absolute;inset:3px;border:1px solid rgba(var(--inkr),.22);pointer-events:none}
 .stat>*{position:relative}
@@ -6160,6 +6160,7 @@ function applyBirthday(dateOpt){
     bar.innerHTML=DQ_ICON.gift+' <div>Hôm nay là <b>sinh nhật của bạn</b> — cả tiệm đã treo cờ, thắp đèn và gói sẵn một tấm thiệp cho '+H(bdayName())+'.</div>'
       +'<button class="btn btn-sm btn-pri" style="margin-left:auto" onclick="bdayOpenCard(\''+d+'\',true)">'+DQ_ICON.env+' Mở thiệp</button>';
     m.insertBefore(bar,div.nextSibling);
+    const g=document.getElementById('holGarland'); if(g)m.insertBefore(g,m.firstChild);
   }
   themeDecoMake('bday');
   let seen=false; try{seen=!!localStorage.getItem('tedu_bday_'+d.slice(0,4));}catch(e){}
@@ -6550,6 +6551,7 @@ function holPreview(key){
       bar.innerHTML=DQ_ICON.gift+' <div>Hôm nay là <b>sinh nhật của bạn</b> — cả tiệm đã treo cờ, thắp đèn và gói sẵn một tấm thiệp cho Diễm Quỳnh.</div>'
         +'<button class="btn btn-sm btn-pri" style="margin-left:auto" onclick="bdayPreviewCard()">'+DQ_ICON.env+' Mở thiệp</button>';
       m0.insertBefore(bar,dv.nextSibling);
+      const g0=document.getElementById('holGarland'); if(g0)m0.insertBefore(g0,m0.firstChild);
     }
     themeDecoMake('bday');
   }else{
