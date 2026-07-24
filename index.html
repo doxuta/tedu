@@ -6442,7 +6442,7 @@ function themeDecoMake(key){
   m.insertBefore(d,m.firstChild);
 }
 function holClear(){
-  ['holidayBanner','holDeco','holFx','holGarland','bdayBanner','bdayCard','themeDeco'].forEach(function(id){const e=document.getElementById(id);if(e)e.remove();});
+  ['holidayBanner','holDeco','holFx','holGarland','bdayBanner','bdayOpenBar','bdayCard','themeDeco'].forEach(function(id){const e=document.getElementById(id);if(e)e.remove();});
   document.body.className=document.body.className.replace(/\bth-[a-z0-9]+\b/g,' ').replace(/\s+/g,' ').trim();
 }
 const HOL_NAMES={tet:'Tết 🧧',trungthu:'Trung thu 🏮',gioto:'Giỗ Tổ ⚜️',newyear:'Tết dương 🎆',phunu83:'8/3 🌷',thongnhat:'30/4–1/5 🕊️',thieunhi:'1/6 🎈',quockhanh:'2/9 🇻🇳',phunu2010:'20/10 🌹',nhagiao:'20/11 💐',noel:'Noel 🎄',khaigiang:'Khai giảng 🎒',doanngo:'Đoan Ngọ 🍒',phatdan:'Phật Đản 🪷',vulan:'Vu Lan 💗',hanthuc:'Hàn thực 🍡',valentine:'Valentine 💝',halloween:'Halloween 🎃',giadinh:'Gia đình VN 🏡'};
